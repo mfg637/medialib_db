@@ -10,16 +10,16 @@ create table content
     origin            varchar(32)                                    null,
     origin_content_id varchar(255)                                   null
 )
-    charset = utf8;
+    collate = utf8mb4_unicode_ci;
 
 create table tag
 (
     ID       bigint unsigned auto_increment
         primary key,
-    title    varchar(250)                                                                 not null,
-    category enum ('artist', 'set', 'original character', 'rating', 'species', 'content') null
+    title    varchar(250)                                                                               null,
+    category enum ('artist', 'set', 'original character', 'rating', 'species', 'content', 'characters') null
 )
-    charset = utf8;
+    collate = utf8mb4_unicode_ci;
 
 create table content_tags_list
 (
@@ -43,5 +43,4 @@ create table tag_alias
         foreign key (tag_id) references tag (ID)
 )
     charset = utf16;
-
 
