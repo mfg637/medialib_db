@@ -1,1 +1,1 @@
-import files_by_tag_search
+from . import files_by_tag_search
