@@ -1,4 +1,5 @@
 import pathlib
+import enum
 
 try:
     from . import config
@@ -11,7 +12,21 @@ except ImportError:
     import common
 
 
-def get_files_with_every_tag(*tags: str, limit: int = None, offset: int = None, sort_by_date: bool = False):
+class ORDERING_BY(enum.Enum):
+    DATE_DECREASING = enum.auto()
+    DATE_INCREASING = enum.auto()
+    NONE = enum.auto()
+    RANDOM = enum.auto()
+
+
+ordering_constants = {
+    ORDERING_BY.DATE_DECREASING: "addition_date DESC",
+    ORDERING_BY.DATE_INCREASING: "addition_date",
+    ORDERING_BY.RANDOM: "RAND()"
+}
+
+
+def get_files_with_every_tag(*tags: str, limit: int = None, offset: int = None, order_by: ORDERING_BY = ORDERING_BY.NONE):
     get_image_id_by_tag_code_block = ("id in (SELECT content_id from content_tags_list where tag_id = "
                                       "(SELECT tag_id from tag_alias where title=%s))")
     base_sql_code_block = "SELECT file_path from content where "
@@ -20,8 +35,8 @@ def get_files_with_every_tag(*tags: str, limit: int = None, offset: int = None, 
         result_sql_block += get_image_id_by_tag_code_block
         if i + 1 < len(tags):
             result_sql_block += " AND "
-    if sort_by_date:
-        result_sql_block += " ORDER BY addition_date DESC"
+    if order_by != ORDERING_BY.NONE:
+        result_sql_block += " ORDER BY {}".format(ordering_constants[order_by])
     if limit is not None:
         result_sql_block += " LIMIT {}".format(limit)
         if offset is not None:
@@ -32,8 +47,7 @@ def get_files_with_every_tag(*tags: str, limit: int = None, offset: int = None, 
     list_files = list()
     file_path = cursor.fetchone()
     while file_path is not None:
-        if config.relative_to.joinpath(file_path[0]).exists():
-            list_files.append(pathlib.Path(file_path[0]))
+        list_files.append(pathlib.Path(file_path[0]))
         file_path = cursor.fetchone()
     common.close_connection_if_not_closed()
     return list_files
