@@ -47,7 +47,6 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
     if "title" in data['content'] and data['content']['title'] is not None:
         content_title = data['content']['title']
     mtime = datetime.datetime.fromtimestamp(file_path.stat().st_mtime)
-    add_date = mtime.strftime('%Y-%m-%d %H:%M:%S')
     tag_ids = list()
     origin_name = None
     if "origin" in data['content'] and data['content']['origin'] is not None:
@@ -86,7 +85,7 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
             content_title,
             media_type,
             description,
-            add_date,
+            mtime,
             origin_name,
             origin_id
         )
