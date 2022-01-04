@@ -25,7 +25,6 @@ def _request(request_body, *args, auto_open_connection=True):
     if auto_open_connection:
         common.connection.commit()
         common.close_connection_if_not_closed()
-        print("CONNECTION CLOSED")
 
     return result
 

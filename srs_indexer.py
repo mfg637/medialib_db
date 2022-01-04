@@ -27,6 +27,51 @@ MEDIA_TYPE_CODES = {
 }
 
 
+def register(
+        file_path, title, media_type, description, origin, content_id, tags, *, auto_open_connection=True
+        ):
+    if auto_open_connection:
+        common.open_connection_if_not_opened()
+    elif common.connection is None:
+        raise OSError("connection is closed")
+    cursor = common.connection.cursor()
+
+    tag_ids = list()
+    for tag_category in tags:
+        for tag in tags[tag_category]:
+            tag_name = tag
+            tag_alias = tag
+            for special_tag_category in ("artist", "set", "original character"):
+                if tag_category == special_tag_category:
+                    tag_alias = "{}:{}".format(special_tag_category, tag_name)
+            tag_id = tags_indexer.tag_register(tag_name, tag_category, tag_alias, auto_open_connection=False)
+            tag_ids.append(tag_id)
+    sql_insert_content_query = (
+        "INSERT INTO content "
+        "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id) VALUES"
+        "(NULL, %s, %s, %s, %s, NOW(), %s, %s)"
+    )
+    cursor.execute(
+        sql_insert_content_query,
+        (
+            str(file_path.relative_to(config.relative_to)),
+            title,
+            media_type,
+            description,
+            origin,
+            content_id
+        )
+    )
+    content_id = cursor.lastrowid
+    sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
+    for tag_id in tag_ids:
+        cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag_id))
+
+    common.connection.commit()
+    if auto_open_connection:
+        common.close_connection_if_not_closed()
+
+
 def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
     if auto_open_connection:
         common.open_connection_if_not_opened()
@@ -113,7 +158,9 @@ def verify_exists(auto_open_connection=True):
         relative_file_path = cursor.fetchone()
 
     for file in deleted_list:
-        sql_delete_file_query = "DELETE FROM file_path WHERE file_path = %s"
+        sql_delete_tags = "DELETE FROM content_tags_list WHERE content_id = (SELECT ID FROM content WHERE file_path = %s)"
+        cursor.execute(sql_delete_tags, (file,))
+        sql_delete_file_query = "DELETE FROM content WHERE file_path = %s"
         cursor.execute(sql_delete_file_query, (file,))
 
     common.connection.commit()
