@@ -22,7 +22,7 @@ class ORDERING_BY(enum.Enum):
 ordering_constants = {
     ORDERING_BY.DATE_DECREASING: "addition_date DESC",
     ORDERING_BY.DATE_INCREASING: "addition_date",
-    ORDERING_BY.RANDOM: "RAND()"
+    ORDERING_BY.RANDOM: "id = ceil(rand() * (select count(*) from content))"
 }
 
 
