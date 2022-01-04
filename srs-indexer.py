@@ -11,6 +11,11 @@ try:
     from . import common
 except ImportError:
     import common
+
+try:
+    from . import tags_indexer
+except ImportError:
+    import tags_indexer
 import datetime
 
 
@@ -61,17 +66,7 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
             for special_tag_category in ("artist", "set", "original character"):
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
-            sql_select_tag_query = "SELECT ID FROM `tag` WHERE title = %s and category = %s"
-            cursor.execute(sql_select_tag_query, (tag_name, tag_category))
-            tag_id = cursor.fetchone()
-            if tag_id is None:
-                sql_insert_tag_query = "INSERT INTO `tag` (`ID`, title, category) VALUES (NULL, %s, %s)"
-                cursor.execute(sql_insert_tag_query, (tag_name, tag_category))
-                tag_id = cursor.lastrowid
-                sql_insert_alias_query = "INSERT INTO `tag_alias` (`ID`, tag_id, title) VALUES (NULL, %s, %s)"
-                cursor.execute(sql_insert_alias_query, (tag_id, tag_alias))
-            else:
-                tag_id = tag_id[0]
+            tag_id = tags_indexer.tag_register(tag_name, tag_category, tag_alias, auto_open_connection=False)
             tag_ids.append(tag_id)
     sql_insert_content_query = (
         "INSERT INTO content "
