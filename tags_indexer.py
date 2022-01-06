@@ -50,6 +50,10 @@ def _insert_new_tag(cursor, tag_name, tag_category, tag_alias):
     tag_id = cursor.lastrowid
     sql_insert_alias_query = "INSERT INTO `tag_alias` (`ID`, tag_id, title) VALUES (NULL, %s, %s)"
     cursor.execute(sql_insert_alias_query, (tag_id, tag_alias))
+    if " " in tag_alias:
+        cursor.execute(sql_insert_alias_query, (tag_id, tag_alias.replace(" ", "_")))
+    elif "_" in tag_alias:
+        cursor.execute(sql_insert_alias_query, (tag_id, tag_alias.replace("_", " ")))
     return tag_id
 
 
