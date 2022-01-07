@@ -1,6 +1,6 @@
 DELETE FROM content_tags_list;
-DELETE FROM content;
 DELETE FROM tag_alias;
+DELETE FROM content;
 DELETE FROM tag;
 
 ALTER TABLE content AUTO_INCREMENT = 0;

@@ -2,7 +2,7 @@ create table content
 (
     ID                bigint unsigned auto_increment
         primary key,
-    file_path         varchar(255)                                   not null,
+    file_path         varchar(255)                                   not null UNIQUE,
     title             varchar(255)                                   null,
     content_type      enum ('image', 'audio', 'video', 'video-loop') not null,
     description       text                                           null,
@@ -17,7 +17,9 @@ create table tag
     ID       bigint unsigned auto_increment
         primary key,
     title    varchar(250)                                                                               null,
-    category enum ('artist', 'set', 'copyright', 'original character', 'rating', 'species', 'content', 'characters') null
+    category enum ('artist', 'set', 'copyright', 'original character', 'rating', 'species', 'content', 'characters') null,
+    constraint uniq_tag
+        unique (title, category)
 )
     collate = utf8mb4_unicode_ci;
 
