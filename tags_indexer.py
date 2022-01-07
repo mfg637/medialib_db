@@ -24,8 +24,8 @@ def _request(request_body, *args, auto_open_connection=True):
 
     result = request_body(cursor, *args)
 
-    common.connection.commit()
     if auto_open_connection:
+        common.connection.commit()
         common.close_connection_if_not_closed()
 
     return result
