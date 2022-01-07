@@ -2,6 +2,8 @@ import pathlib
 import datetime
 import re
 
+import mysql.connector.errors
+
 try:
     from . import config
 except ImportError:
@@ -22,8 +24,8 @@ def _request(request_body, *args, auto_open_connection=True):
 
     result = request_body(cursor, *args)
 
+    common.connection.commit()
     if auto_open_connection:
-        common.connection.commit()
         common.close_connection_if_not_closed()
 
     return result
@@ -49,7 +51,21 @@ def _insert_new_tag(cursor, tag_name, tag_category, tag_alias):
     cursor.execute(sql_insert_tag_query, (tag_name, tag_category))
     tag_id = cursor.lastrowid
     sql_insert_alias_query = "INSERT INTO `tag_alias` (`ID`, tag_id, title) VALUES (NULL, %s, %s)"
-    cursor.execute(sql_insert_alias_query, (tag_id, tag_alias))
+    try:
+        cursor.execute(sql_insert_alias_query, (tag_id, tag_alias))
+    except mysql.connector.errors.IntegrityError as e:
+        common.connection.rollback()
+        get_tag_info = "SELECT tag.category, ID from tag where title=%s"
+        cursor.execute(get_tag_info, (tag_name,))
+        response = cursor.fetchone()
+        _category = response[0]
+        tag_id = response[1]
+        if _category == "content":
+            update_category = "UPDATE tag Set category=%s where ID=%s"
+            cursor.execute(update_category, (tag_category, tag_id))
+            return tag_id
+        else:
+            raise e
     if " " in tag_alias:
         cursor.execute(sql_insert_alias_query, (tag_id, tag_alias.replace(" ", "_")))
     elif "_" in tag_alias:
