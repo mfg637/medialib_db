@@ -7,14 +7,14 @@ except ImportError:
 
 connection = None
 
-db_lock = multiprocessing.Lock()
+#db_lock = multiprocessing.Lock()
 
 
 def open_connection_if_not_opened():
     global connection
     global db_lock
     if connection is None:
-        db_lock.acquire()
+        #db_lock.acquire()
         connection = mysql.connector.connect(
             host=config.db_host, database=config.db_name, user=config.db_user, password=config.db_password
         )
@@ -24,7 +24,7 @@ def close_connection_if_not_closed():
     global connection
     global db_lock
     if connection is not None:
-        db_lock.release()
+        #db_lock.release()
         connection.close()
         connection = None
 

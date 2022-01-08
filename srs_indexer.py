@@ -38,7 +38,8 @@ def register(
         raise OSError("connection is closed")
     cursor = common.connection.cursor()
 
-    tag_ids = list()
+    _tags = list()
+
     for tag_category in tags:
         for tag in tags[tag_category]:
             tag_name = tag
@@ -46,8 +47,12 @@ def register(
             for special_tag_category in ("artist", "set", "original character"):
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
-            tag_id = tags_indexer.tag_register(tag_name, tag_category, tag_alias, auto_open_connection=False)
-            tag_ids.append(tag_id)
+            tag_id = tags_indexer.check_tag_exists(tag_name, tag_category, auto_open_connection=False)
+            if tag_id is None:
+                tag_id = tags_indexer.insert_new_tag(tag_name, tag_category, tag_alias, auto_open_connection=False)
+            else:
+                tag_id = tag_id[0]
+            _tags.append((tag_id, tag_name, tag_category))
     sql_insert_content_query = (
         "INSERT INTO content "
         "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id) VALUES"
@@ -66,8 +71,8 @@ def register(
     )
     content_id = cursor.lastrowid
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
-    for tag_id in tag_ids:
-        cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag_id))
+    for tag in _tags:
+        cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
 
     common.connection.commit()
     if auto_open_connection:
