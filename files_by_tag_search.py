@@ -31,14 +31,16 @@ def get_files_with_every_tag(*tags: str, limit: int = None, offset: int = None, 
     get_image_id_by_tag_code_block = "id in (SELECT content_id from content_tags_list where tag_id = %s)"
     base_sql_code_block = "SELECT file_path from content where "
     result_sql_block = base_sql_code_block
-    get_tags_ids = "CALL get_tags_ids(%s)"
+    
     tag_ids = list()
 
     common.open_connection_if_not_opened()
     cursor = common.connection.cursor()
     for tag in tags:
-        cursor.execute(get_tags_ids, (tag,))
-        tag_ids.extend([i[0] for i in cursor.fetchall()])
+        cursor.callproc('get_tags_ids', (tag,))
+        # implied that stored only one result
+        for result in cursor.stored_results():
+            tag_ids.extend([i[0] for i in result.fetchall()])
 
     for i in range(len(tag_ids)):
         result_sql_block += get_image_id_by_tag_code_block
