@@ -52,14 +52,14 @@ create table tag_alias
 )
     charset = utf16;
 
-CREATE PROCEDURE get_tags_ids (IN tag_aliace_name VARCHAR(251))
+CREATE PROCEDURE get_tags_ids (IN tag_alias_name VARCHAR(251))
 BEGIN
     # taken from https://stackoverflow.com/a/33737203
     with recursive get_tags_ids_r (id, parent_id) as (
         select      ID,
                     parent
         from        tag
-        where       ID = (SELECT tag_id from tag_alias where tag_alias.title=tag_aliace_name COLLATE utf8mb4_unicode_ci)
+        where       ID = (SELECT tag_id from tag_alias where tag_alias.title=tag_alias_name COLLATE utf8mb4_unicode_ci)
         union all
         select      t.ID,
                     t.parent

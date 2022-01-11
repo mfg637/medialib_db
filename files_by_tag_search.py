@@ -1,5 +1,6 @@
 import pathlib
 import enum
+import random
 
 try:
     from . import config
@@ -26,44 +27,79 @@ ordering_constants = {
 }
 
 
-def get_files_with_every_tag(*tags: str, limit: int = None, offset: int = None, order_by: ORDERING_BY = ORDERING_BY.NONE):
-    get_image_id_by_tag_code_block = ("id in (SELECT content_id from content_tags_list where tag_id = "
-                                      "(SELECT tag_id from tag_alias where title=%s))")
-    base_sql_code_block = "SELECT file_path from content where "
-    result_sql_block = base_sql_code_block
-    for i in range(len(tags)):
+def _requests_fabric(
+        *tags: str,
+        limit: int = None,
+        offset: int = None,
+        order_by: ORDERING_BY = ORDERING_BY.NONE,
+        base_sql_block,
+        cursor
+        ):
+    get_image_id_by_tag_code_block = "id in (SELECT content_id from content_tags_list where tag_id in ({}))"
+    result_sql_block = base_sql_block
+
+    tag_ids = list()
+    tags_count = list()
+
+    for tag in tags:
+        cursor.callproc('get_tags_ids', (tag,))
+        # implied that stored only one result
+        for result in cursor.stored_results():
+            response = result.fetchall()
+            tags_count.append(len(response))
+            tag_ids.extend([i[0] for i in response])
+
+    tags_set_lists = list()
+
+    for i in range(len(tags_count)):
         result_sql_block += get_image_id_by_tag_code_block
-        if i + 1 < len(tags):
+        tag_set_list = "%s"
+        for j in range(1, tags_count[i]):
+            tag_set_list += ", %s"
+        tags_set_lists.append(tag_set_list)
+        if i + 1 < len(tags_count):
             result_sql_block += " AND "
+
+    result_sql_block = result_sql_block.format(*tags_set_lists)
+
     if order_by != ORDERING_BY.NONE:
         result_sql_block += " ORDER BY {}".format(ordering_constants[order_by])
     if limit is not None:
         result_sql_block += " LIMIT {}".format(limit)
         if offset is not None:
             result_sql_block += " OFFSET {}".format(offset)
+    print(result_sql_block, tag_ids, type(tag_ids[0]))
+    cursor.execute(result_sql_block, tag_ids)
+
+
+def get_files_with_every_tag(*tags: str, limit: int = None, offset: int = None, order_by: ORDERING_BY = ORDERING_BY.NONE):
     common.open_connection_if_not_opened()
     cursor = common.connection.cursor()
-    cursor.execute(result_sql_block, tags)
+    base_sql_code_block = "SELECT file_path from content where "
+    _requests_fabric(
+        *tags, limit=limit, offset=offset, order_by=order_by, base_sql_block=base_sql_code_block, cursor=cursor
+    )
+
     list_files = list()
     file_path = cursor.fetchone()
     while file_path is not None:
         list_files.append(pathlib.Path(file_path[0]))
         file_path = cursor.fetchone()
+    if order_by == ORDERING_BY.RANDOM:
+        random.shuffle(list_files)
     common.close_connection_if_not_closed()
     return list_files
 
+
 def count_files_with_every_tag(*tags: str):
-    get_image_id_by_tag_code_block = ("id in (SELECT content_id from content_tags_list where tag_id = "
-                                      "(SELECT tag_id from tag_alias where title=%s))")
     base_sql_code_block = "SELECT COUNT(*) from content where "
-    result_sql_block = base_sql_code_block
-    for i in range(len(tags)):
-        result_sql_block += get_image_id_by_tag_code_block
-        if i + 1 < len(tags):
-            result_sql_block += " AND "
     common.open_connection_if_not_opened()
     cursor = common.connection.cursor()
-    cursor.execute(result_sql_block, tags)
+    get_image_id_by_tag_code_block = ("id in (SELECT content_id from content_tags_list where tag_id = "
+                                      "(SELECT tag_id from tag_alias where title=%s))")
+
+    _requests_fabric(*tags, base_sql_block=base_sql_code_block, cursor=cursor)
+
     result = cursor.fetchone()[0]
     common.close_connection_if_not_closed()
     return result
