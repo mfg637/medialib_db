@@ -17,7 +17,7 @@ create table tag
     ID       bigint unsigned auto_increment
         primary key,
     title    varchar(250)                                                                                            null,
-    category enum ('artist', 'set', 'copyright', 'original character', 'rating', 'species', 'content', 'characters') null,
+    category enum ('artist', 'set', 'copyright', 'original character', 'rating', 'species', 'content', 'character') null,
     parent   bigint unsigned                                                                                         null,
     constraint uniq_tag
         unique (title, category),

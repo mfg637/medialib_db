@@ -41,18 +41,21 @@ def register(
     _tags = list()
 
     for tag_category in tags:
+        _category = tag_category
+        if tag_category == "characters":
+            _category = "character"
         for tag in tags[tag_category]:
             tag_name = tag
             tag_alias = tag
             for special_tag_category in ("artist", "set", "original character"):
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
-            tag_id = tags_indexer.check_tag_exists(tag_name, tag_category, auto_open_connection=False)
+            tag_id = tags_indexer.check_tag_exists(tag_name, _category, auto_open_connection=False)
             if tag_id is None:
-                tag_id = tags_indexer.insert_new_tag(tag_name, tag_category, tag_alias, auto_open_connection=False)
+                tag_id = tags_indexer.insert_new_tag(tag_name, _category, tag_alias, auto_open_connection=False)
             else:
                 tag_id = tag_id[0]
-            _tags.append((tag_id, tag_name, tag_category))
+            _tags.append((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
         "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id) VALUES"
@@ -116,18 +119,21 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
     if "id" in data['content'] and data['content']['id'] is not None:
         origin_id = str(data['content']['id'])
     for tag_category in data['content']['tags']:
+        _category = tag_category
+        if tag_category == "characters":
+            _category = "character"
         for tag in data['content']['tags'][tag_category]:
             tag_name = tag
             tag_alias = tag
             for special_tag_category in ("artist", "set", "original character"):
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
-            tag_id = tags_indexer.check_tag_exists(tag_name, tag_category, auto_open_connection=False)
+            tag_id = tags_indexer.check_tag_exists(tag_name, _category, auto_open_connection=False)
             if tag_id is None:
-                tag_id = tags_indexer.insert_new_tag(tag_name, tag_category, tag_alias, auto_open_connection=False)
+                tag_id = tags_indexer.insert_new_tag(tag_name, _category, tag_alias, auto_open_connection=False)
             else:
                 tag_id = tag_id[0]
-            tags.append((tag_id, tag_name, tag_category))
+            tags.append((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
         "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id) VALUES"
