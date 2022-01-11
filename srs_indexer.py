@@ -58,17 +58,21 @@ def register(
         "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id) VALUES"
         "(NULL, %s, %s, %s, %s, NOW(), %s, %s)"
     )
-    cursor.execute(
-        sql_insert_content_query,
-        (
-            str(file_path.relative_to(config.relative_to)),
-            title,
-            media_type,
-            description,
-            origin,
-            content_id
+    try:
+        cursor.execute(
+            sql_insert_content_query,
+            (
+                str(file_path.relative_to(config.relative_to)),
+                title,
+                media_type,
+                description,
+                origin,
+                content_id
+            )
         )
-    )
+    except mysql.connector.errors.IntegrityError:
+        # triggers in same file path case (file exists)
+        return
     content_id = cursor.lastrowid
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
     for tag in _tags:
