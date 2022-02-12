@@ -41,34 +41,41 @@ def register(
     _tags = list()
 
     for tag_category in tags:
+        _category = tag_category
+        if tag_category == "characters":
+            _category = "character"
         for tag in tags[tag_category]:
             tag_name = tag
             tag_alias = tag
             for special_tag_category in ("artist", "set", "original character"):
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
-            tag_id = tags_indexer.check_tag_exists(tag_name, tag_category, auto_open_connection=False)
+            tag_id = tags_indexer.check_tag_exists(tag_name, _category, auto_open_connection=False)
             if tag_id is None:
-                tag_id = tags_indexer.insert_new_tag(tag_name, tag_category, tag_alias, auto_open_connection=False)
+                tag_id = tags_indexer.insert_new_tag(tag_name, _category, tag_alias, auto_open_connection=False)
             else:
                 tag_id = tag_id[0]
-            _tags.append((tag_id, tag_name, tag_category))
+            _tags.append((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
         "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id) VALUES"
         "(NULL, %s, %s, %s, %s, NOW(), %s, %s)"
     )
-    cursor.execute(
-        sql_insert_content_query,
-        (
-            str(file_path.relative_to(config.relative_to)),
-            title,
-            media_type,
-            description,
-            origin,
-            content_id
+    try:
+        cursor.execute(
+            sql_insert_content_query,
+            (
+                str(file_path.relative_to(config.relative_to)),
+                title,
+                media_type,
+                description,
+                origin,
+                content_id
+            )
         )
-    )
+    except mysql.connector.errors.IntegrityError:
+        # triggers in same file path case (file exists)
+        return
     content_id = cursor.lastrowid
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
     for tag in _tags:
@@ -112,18 +119,21 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
     if "id" in data['content'] and data['content']['id'] is not None:
         origin_id = str(data['content']['id'])
     for tag_category in data['content']['tags']:
+        _category = tag_category
+        if tag_category == "characters":
+            _category = "character"
         for tag in data['content']['tags'][tag_category]:
             tag_name = tag
             tag_alias = tag
             for special_tag_category in ("artist", "set", "original character"):
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
-            tag_id = tags_indexer.check_tag_exists(tag_name, tag_category, auto_open_connection=False)
+            tag_id = tags_indexer.check_tag_exists(tag_name, _category, auto_open_connection=False)
             if tag_id is None:
-                tag_id = tags_indexer.insert_new_tag(tag_name, tag_category, tag_alias, auto_open_connection=False)
+                tag_id = tags_indexer.insert_new_tag(tag_name, _category, tag_alias, auto_open_connection=False)
             else:
                 tag_id = tag_id[0]
-            tags.append((tag_id, tag_name, tag_category))
+            tags.append((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
         "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id) VALUES"
