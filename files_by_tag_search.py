@@ -41,7 +41,7 @@ hidden_filtering_constants = {
 
 
 def _requests_fabric(
-        *tags: str,
+        *tags: dict,
         limit: int = None,
         offset: int = None,
         order_by: ORDERING_BY = ORDERING_BY.NONE,
@@ -50,13 +50,14 @@ def _requests_fabric(
         cursor
         ):
     get_image_id_by_tag_code_block = "id in (SELECT content_id from content_tags_list where tag_id in ({}))"
+    get_image_id_by_not_tag_code_block = "id not in (SELECT content_id from content_tags_list where tag_id in ({}))"
     result_sql_block = base_sql_block
 
     tag_ids = list()
     tags_count = list()
 
     for tag in tags:
-        cursor.callproc('get_tags_ids', (tag,))
+        cursor.callproc('get_tags_ids', (tag["title"],))
         # implied that stored only one result
         for result in cursor.stored_results():
             response = result.fetchall()
@@ -64,11 +65,13 @@ def _requests_fabric(
             tag_ids.extend([i[0] for i in response])
 
     tags_set_lists = list()
-
-    for i in range(len(tags_count)):
-        result_sql_block += get_image_id_by_tag_code_block
+    for i, val in enumerate(tags_count):
+        if tags[i]["not"]: # not tag
+            result_sql_block += get_image_id_by_not_tag_code_block
+        else:
+            result_sql_block += get_image_id_by_tag_code_block
         tag_set_list = "%s"
-        for j in range(1, tags_count[i]):
+        for j in range(1, val):
             tag_set_list += ", %s"
         tags_set_lists.append(tag_set_list)
         if i + 1 < len(tags_count):
