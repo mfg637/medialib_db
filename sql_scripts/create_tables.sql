@@ -2,13 +2,16 @@ create table content
 (
     ID                bigint unsigned auto_increment
         primary key,
-    file_path         varchar(255)                                   not null UNIQUE,
+    file_path         varchar(255)                                   not null,
     title             varchar(255)                                   null,
     content_type      enum ('image', 'audio', 'video', 'video-loop') not null,
     description       text                                           null,
     addition_date     datetime                                       not null,
     origin            varchar(32)                                    null,
-    origin_content_id varchar(255)                                   null
+    origin_content_id varchar(255)                                   null,
+    hidden            tinyint(1) default 0                           not null,
+    constraint file_path
+        unique (file_path)
 )
     collate = utf8mb4_unicode_ci;
 

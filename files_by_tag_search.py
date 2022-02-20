@@ -23,7 +23,20 @@ class ORDERING_BY(enum.Enum):
 ordering_constants = {
     ORDERING_BY.DATE_DECREASING: "addition_date DESC",
     ORDERING_BY.DATE_INCREASING: "addition_date",
-    ORDERING_BY.RANDOM: "id = ceil(rand() * (select count(*) from content))"
+    ORDERING_BY.RANDOM: "RAND()"
+}
+
+
+class HIDDEN_FILTERING(enum.Enum):
+    NONE = enum.auto()
+    FILTER = enum.auto()
+    ONLY_HIDDEN = enum.auto()
+
+
+hidden_filtering_constants = {
+    HIDDEN_FILTERING.NONE: "",
+    HIDDEN_FILTERING.FILTER: " AND hidden=FALSE",
+    HIDDEN_FILTERING.ONLY_HIDDEN: " AND hidden=TRUE"
 }
 
 
@@ -32,6 +45,7 @@ def _requests_fabric(
         limit: int = None,
         offset: int = None,
         order_by: ORDERING_BY = ORDERING_BY.NONE,
+        filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER,
         base_sql_block,
         cursor
         ):
@@ -68,16 +82,30 @@ def _requests_fabric(
         result_sql_block += " LIMIT {}".format(limit)
         if offset is not None:
             result_sql_block += " OFFSET {}".format(offset)
+    if filter_hidden != HIDDEN_FILTERING.NONE:
+        result_sql_block += hidden_filtering_constants[filter_hidden]
     print(result_sql_block, tag_ids, type(tag_ids[0]))
     cursor.execute(result_sql_block, tag_ids)
 
 
-def get_files_with_every_tag(*tags: str, limit: int = None, offset: int = None, order_by: ORDERING_BY = ORDERING_BY.NONE):
+def get_files_with_every_tag(
+        *tags: str,
+        limit: int = None,
+        offset: int = None,
+        order_by: ORDERING_BY = ORDERING_BY.NONE,
+        filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER,
+    ):
     common.open_connection_if_not_opened()
     cursor = common.connection.cursor()
     base_sql_code_block = "SELECT file_path from content where "
     _requests_fabric(
-        *tags, limit=limit, offset=offset, order_by=order_by, base_sql_block=base_sql_code_block, cursor=cursor
+        *tags,
+        limit=limit,
+        offset=offset,
+        order_by=order_by,
+        base_sql_block=base_sql_code_block,
+        cursor=cursor,
+        filter_hidden=filter_hidden
     )
 
     list_files = list()
@@ -91,14 +119,14 @@ def get_files_with_every_tag(*tags: str, limit: int = None, offset: int = None, 
     return list_files
 
 
-def count_files_with_every_tag(*tags: str):
+def count_files_with_every_tag(*tags: str, filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER):
     base_sql_code_block = "SELECT COUNT(*) from content where "
     common.open_connection_if_not_opened()
     cursor = common.connection.cursor()
     get_image_id_by_tag_code_block = ("id in (SELECT content_id from content_tags_list where tag_id = "
                                       "(SELECT tag_id from tag_alias where title=%s))")
 
-    _requests_fabric(*tags, base_sql_block=base_sql_code_block, cursor=cursor)
+    _requests_fabric(*tags, base_sql_block=base_sql_code_block, cursor=cursor, filter_hidden=filter_hidden)
 
     result = cursor.fetchone()[0]
     common.close_connection_if_not_closed()

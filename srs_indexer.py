@@ -58,8 +58,8 @@ def register(
             _tags.append((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
-        "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id) VALUES"
-        "(NULL, %s, %s, %s, %s, NOW(), %s, %s)"
+        "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) VALUES"
+        "(NULL, %s, %s, %s, %s, NOW(), %s, %s, FALSE)"
     )
     try:
         cursor.execute(
@@ -136,8 +136,8 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
             tags.append((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
-        "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id) VALUES"
-        "(NULL, %s, %s, %s, %s, %s, %s, %s)"
+        "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) VALUES"
+        "(NULL, %s, %s, %s, %s, %s, %s, %s, FALSE)"
     )
     cursor.execute(
         sql_insert_content_query,
