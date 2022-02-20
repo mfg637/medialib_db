@@ -28,12 +28,13 @@ def get_file_data_by_file_path(path: pathlib.Path, auto_open_connection=True):
     return result
 
 
-def content_update(content_id, content_title, origin_name, origin_id, hidden, auto_open_connection):
+def content_update(content_id, content_title, origin_name, origin_id, hidden, description, auto_open_connection):
     if auto_open_connection:
         common.open_connection_if_not_opened()
-    sql_template = "UPDATE content SET title=%s, origin=%s, origin_content_id=%s, hidden=%s WHERE ID=%s"
+    sql_template = \
+        "UPDATE content SET title=%s, origin=%s, origin_content_id=%s, hidden=%s, description=%s WHERE ID=%s"
     cursor = common.connection.cursor()
-    cursor.execute(sql_template, (content_title, origin_name, origin_id, hidden, content_id,))
+    cursor.execute(sql_template, (content_title, origin_name, origin_id, hidden, description, content_id,))
     common.connection.commit()
     if auto_open_connection:
         common.close_connection_if_not_closed()
