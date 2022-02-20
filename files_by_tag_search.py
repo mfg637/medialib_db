@@ -28,13 +28,13 @@ ordering_constants = {
 
 
 class HIDDEN_FILTERING(enum.Enum):
-    NONE = enum.auto()
     FILTER = enum.auto()
+    SHOW = enum.auto()
     ONLY_HIDDEN = enum.auto()
 
 
 hidden_filtering_constants = {
-    HIDDEN_FILTERING.NONE: "",
+    HIDDEN_FILTERING.SHOW: "",
     HIDDEN_FILTERING.FILTER: " AND hidden=FALSE",
     HIDDEN_FILTERING.ONLY_HIDDEN: " AND hidden=TRUE"
 }
@@ -76,7 +76,7 @@ def _requests_fabric(
 
     result_sql_block = result_sql_block.format(*tags_set_lists)
 
-    if filter_hidden != HIDDEN_FILTERING.NONE:
+    if filter_hidden != HIDDEN_FILTERING.SHOW:
         result_sql_block += hidden_filtering_constants[filter_hidden]
 
     if order_by != ORDERING_BY.NONE:
