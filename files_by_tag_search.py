@@ -76,14 +76,15 @@ def _requests_fabric(
 
     result_sql_block = result_sql_block.format(*tags_set_lists)
 
+    if filter_hidden != HIDDEN_FILTERING.NONE:
+        result_sql_block += hidden_filtering_constants[filter_hidden]
+
     if order_by != ORDERING_BY.NONE:
         result_sql_block += " ORDER BY {}".format(ordering_constants[order_by])
     if limit is not None:
         result_sql_block += " LIMIT {}".format(limit)
         if offset is not None:
             result_sql_block += " OFFSET {}".format(offset)
-    if filter_hidden != HIDDEN_FILTERING.NONE:
-        result_sql_block += hidden_filtering_constants[filter_hidden]
     print(result_sql_block, tag_ids, type(tag_ids[0]))
     cursor.execute(result_sql_block, tag_ids)
 
