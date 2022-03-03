@@ -29,6 +29,10 @@ MEDIA_TYPE_CODES = {
 }
 
 
+def get_content_type(data):
+    return MEDIA_TYPE_CODES[data['content']['media-type']]
+
+
 def register(
         file_path, title, media_type, description, origin, content_id, tags, *, auto_open_connection=True
         ):
@@ -106,7 +110,7 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
         if auto_open_connection:
             common.close_connection_if_not_closed()
         return
-    media_type = MEDIA_TYPE_CODES[data['content']['media-type']]
+    media_type = get_content_type(data)
     content_title = None
     if "title" in data['content'] and data['content']['title'] is not None:
         content_title = data['content']['title']
