@@ -85,8 +85,8 @@ def register(
     for tag in _tags:
         cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
 
-    common.connection.commit()
     if auto_open_connection:
+        common.connection.commit()
         common.close_connection_if_not_closed()
 
 
