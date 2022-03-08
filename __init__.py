@@ -80,12 +80,22 @@ def add_tags_for_content(content_id, tags: list[tuple[str, str, str]], auto_open
     if auto_open_connection:
         common.open_connection_if_not_opened()
     for tag in tags:
-
-        tag_id = tags_indexer.check_tag_exists(tag[0], tag[1], auto_open_connection=False)
-        if tag_id is None:
-            tag_id = tags_indexer.insert_new_tag(tag[0], tag[1], tag[2], auto_open_connection=False)
+        tag_id = None
+        if tag[1] is not None:
+            tag_id = tags_indexer.check_tag_exists(tag[0], tag[1], auto_open_connection=False)
         else:
+            get_id_by_tag_alias_sql = "SELECT tag_id FROM tag_alias WHERE title=%s"
+            cursor = common.connection.cursor()
+            cursor.execute(get_id_by_tag_alias_sql, (tag[2],))
+            tag_id = cursor.fetchone()
+
+        if tag_id is None and tag[1] is not None:
+            tag_id = tags_indexer.insert_new_tag(tag[0], tag[1], tag[2], auto_open_connection=False)
+        elif tag_id is not None:
             tag_id = tag_id[0]
+        else:
+            raise Exception("Not registered tag error", tag[0])
+
 
         sql_insert_content_id_to_tag_id = \
             "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
