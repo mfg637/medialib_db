@@ -72,3 +72,15 @@ BEGIN
     )
     select ID from get_tags_ids_r;
 end;
+
+CREATE TABLE thumbnail
+(
+	content_id bigint unsigned not null,
+	width int not null,
+	height int not null,
+	generation_date date not null,
+	format varchar(8) not null,
+	file_path varchar(255) not null,
+    primary key (content_id, width, height, format),
+	foreign key (content_id) references content(ID)
+);

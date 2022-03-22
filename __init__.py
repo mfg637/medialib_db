@@ -28,6 +28,41 @@ def get_file_data_by_file_path(path: pathlib.Path, auto_open_connection=True):
     return result
 
 
+def get_thumbnail(path: pathlib.Path, width:int, height:int, _format: str, connection):
+    #if auto_open_connection:
+    #    common.open_connection_if_not_opened()
+    sql_template = "SELECT file_path, format FROM thumbnail WHERE content_id=(SELECT ID FROM content WHERE file_path=%s) and width=%s and height=%s and format=%s"
+    cursor = connection.cursor()
+    cursor.execute(sql_template, (str(path), width, height, _format))
+    result = cursor.fetchone()
+    #if auto_open_connection:
+    #    common.close_connection_if_not_closed()
+    if result is not None:
+        return result
+    else:
+        return None, None
+
+
+def register_thumbnail(source_file: pathlib.Path, width:int, height:int, _format:str, connection):
+    #if auto_open_connection:
+    #    common.open_connection_if_not_opened()
+    sql_template_get_id = "SELECT ID from content WHERE file_path=%s"
+    sql_template_register = "INSERT INTO thumbnail VALUE (%s, %s, %s, NOW(), %s, %s)"
+    cursor = connection.cursor()
+    print(sql_template_get_id, (str(source_file),))
+    cursor.execute(sql_template_get_id, (str(source_file),))
+    content_id = cursor.fetchone()
+    thumbnail_file_name = None
+    if content_id is not None:
+        content_id = content_id[0]
+        thumbnail_file_name = "{}-{}x{}.{}".format(content_id, width, height, _format.lower())
+        cursor.execute(sql_template_register, (content_id, width, height, _format, thumbnail_file_name))
+    #if auto_open_connection:
+    connection.commit()
+    #    common.close_connection_if_not_closed()
+    return content_id, thumbnail_file_name
+
+
 def content_update(content_id, content_title, origin_name, origin_id, hidden, description, auto_open_connection):
     if auto_open_connection:
         common.open_connection_if_not_opened()
