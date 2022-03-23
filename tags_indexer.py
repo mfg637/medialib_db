@@ -15,20 +15,9 @@ except ImportError:
     import common
 
 
-def _request(request_body, *args, auto_open_connection=True):
-    if auto_open_connection:
-        common.open_connection_if_not_opened()
-    elif common.connection is None:
-        raise OSError("connection is closed")
-    cursor = common.connection.cursor()
-
-    result = request_body(cursor, *args)
-
-    if auto_open_connection:
-        common.connection.commit()
-        common.close_connection_if_not_closed()
-
-    return result
+def _request(request_body, *args, connection):
+    cursor = connection.cursor()
+    return request_body(cursor, *args)
 
 
 def _check_tag_exists(cursor, tag_name:str, tag_category:str):
@@ -38,12 +27,12 @@ def _check_tag_exists(cursor, tag_name:str, tag_category:str):
     return cursor.fetchone()
 
 
-def check_tag_exists(tag_name, tag_category, auto_open_connection=True) -> tuple[int,]:
+def check_tag_exists(tag_name, tag_category, connection) -> tuple[int,]:
     """
     Check exists tag in specified category and returns tag ID.
     :rtype: tuple with ID of tag (tuple(int,))
     """
-    return _request(_check_tag_exists, tag_name, tag_category, auto_open_connection=auto_open_connection)
+    return _request(_check_tag_exists, tag_name, tag_category, connection=connection)
 
 
 def _insert_new_tag(cursor, tag_name: str, tag_category, tag_alias):
@@ -77,12 +66,12 @@ def _insert_new_tag(cursor, tag_name: str, tag_category, tag_alias):
     return tag_id
 
 
-def insert_new_tag(tag_name, tag_category, tag_alias, auto_open_connection=True) -> int:
+def insert_new_tag(tag_name, tag_category, tag_alias, connection) -> int:
     """
     Insert new tag in database's table and returns tag ID.
     :rtype: ID of tag (int)
     """
-    return _request(_insert_new_tag, tag_name, tag_category, tag_alias, auto_open_connection=auto_open_connection)
+    return _request(_insert_new_tag, tag_name, tag_category, tag_alias, connection=connection)
 
 
 def _get_category_of_tag(cursor, tag_name):
@@ -94,9 +83,9 @@ def _get_category_of_tag(cursor, tag_name):
     return cursor.fetchone()
 
 
-def get_category_of_tag(tag_name, auto_open_connection=True):
+def get_category_of_tag(tag_name, connection):
     """
     Return category of tag, if exists
     :rtype: str(enum(tag_categories))
     """
-    return _request(_get_category_of_tag, tag_name, auto_open_connection=auto_open_connection)
+    return _request(_get_category_of_tag, tag_name, connection=connection)

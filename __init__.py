@@ -75,7 +75,7 @@ def content_update(content_id, content_title, origin_name, origin_id, hidden, de
         common.close_connection_if_not_closed()
 
 
-def content_regster(
+def content_register(
         content_title,
         file_path,
         content_type,

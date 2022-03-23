@@ -4,6 +4,8 @@ import pathlib
 
 import mysql.connector
 
+import medialib_db.common
+
 try:
     from . import config
 except ImportError:
@@ -34,13 +36,9 @@ def get_content_type(data):
 
 
 def register(
-        file_path, title, media_type, description, origin, content_id, tags, *, auto_open_connection=True
+        file_path, title, media_type, description, origin, content_id, tags, connection
         ):
-    if auto_open_connection:
-        common.open_connection_if_not_opened()
-    elif common.connection is None:
-        raise OSError("connection is closed")
-    cursor = common.connection.cursor()
+    cursor = connection.cursor()
 
     _tags = list()
 
@@ -54,9 +52,9 @@ def register(
             for special_tag_category in ("artist", "set", "original character"):
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
-            tag_id = tags_indexer.check_tag_exists(tag_name, _category, auto_open_connection=False)
+            tag_id = tags_indexer.check_tag_exists(tag_name, _category, connection)
             if tag_id is None:
-                tag_id = tags_indexer.insert_new_tag(tag_name, _category, tag_alias, auto_open_connection=False)
+                tag_id = tags_indexer.insert_new_tag(tag_name, _category, tag_alias, connection)
             else:
                 tag_id = tag_id[0]
             _tags.append((tag_id, tag_name, _category))
@@ -85,9 +83,7 @@ def register(
     for tag in _tags:
         cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
 
-    if auto_open_connection:
-        common.connection.commit()
-        common.close_connection_if_not_closed()
+    connection.commit()
 
 
 def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
@@ -132,9 +128,11 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
             for special_tag_category in ("artist", "set", "original character"):
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
-            tag_id = tags_indexer.check_tag_exists(tag_name, _category, auto_open_connection=False)
+            tag_id = tags_indexer.check_tag_exists(tag_name, _category, connection=common.connection)
             if tag_id is None:
-                tag_id = tags_indexer.insert_new_tag(tag_name, _category, tag_alias, auto_open_connection=False)
+                tag_id = tags_indexer.insert_new_tag(
+                    tag_name, _category, tag_alias, connection=common.connection
+                )
             else:
                 tag_id = tag_id[0]
             tags.append((tag_id, tag_name, _category))
