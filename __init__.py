@@ -117,7 +117,7 @@ def add_tags_for_content(content_id, tags: list[tuple[str, str, str]], auto_open
     for tag in tags:
         tag_id = None
         if tag[1] is not None:
-            tag_id = tags_indexer.check_tag_exists(tag[0], tag[1], auto_open_connection=False)
+            tag_id = tags_indexer.check_tag_exists(tag[0], tag[1], common.connection)
         else:
             get_id_by_tag_alias_sql = "SELECT tag_id FROM tag_alias WHERE title=%s"
             cursor = common.connection.cursor()
@@ -125,7 +125,7 @@ def add_tags_for_content(content_id, tags: list[tuple[str, str, str]], auto_open
             tag_id = cursor.fetchone()
 
         if tag_id is None and tag[1] is not None:
-            tag_id = tags_indexer.insert_new_tag(tag[0], tag[1], tag[2], auto_open_connection=False)
+            tag_id = tags_indexer.insert_new_tag(tag[0], tag[1], tag[2], common.connection)
         elif tag_id is not None:
             tag_id = tag_id[0]
         else:
