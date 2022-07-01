@@ -1,3 +1,7 @@
+CREATE DATABASE medialib
+  CHARACTER SET = 'utf8mb4'
+  COLLATE = 'utf8mb4_unicode_ci';
+
 create table content
 (
     ID                bigint unsigned auto_increment
@@ -12,8 +16,7 @@ create table content
     hidden            tinyint(1) default 0                           not null,
     constraint file_path
         unique (file_path)
-)
-    collate = utf8mb4_unicode_ci;
+);
 
 create table tag
 (
@@ -26,8 +29,7 @@ create table tag
         unique (title, category),
     constraint tag_ibfk_1
         foreign key (parent) references tag (ID)
-)
-    collate = utf8mb4_unicode_ci;
+);
 
 create index parent
     on tag (parent);
@@ -52,9 +54,9 @@ create table tag_alias
         unique (title),
     constraint tag_alias_FK
         foreign key (tag_id) references tag (ID)
-)
-    charset = utf16;
+);
 
+DELIMITER ^^^
 CREATE PROCEDURE get_tags_ids (IN tag_alias_name VARCHAR(251))
 BEGIN
     # taken from https://stackoverflow.com/a/33737203
@@ -71,7 +73,8 @@ BEGIN
                 on  t.parent = t_rec.ID
     )
     select ID from get_tags_ids_r;
-end;
+end^^^
+DELIMITER ;
 
 CREATE TABLE thumbnail
 (
