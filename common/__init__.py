@@ -1,4 +1,8 @@
-import mysql.connector
+try:
+    import mysql.connector
+except ImportError:
+    raise Exception("Mysql connector not properly installed")
+
 import multiprocessing
 try:
     from .. import config
