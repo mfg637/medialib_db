@@ -92,7 +92,7 @@ def _requests_fabric(
     cursor.execute(result_sql_block, tag_ids)
 
 
-def get_files_with_every_tag(
+def get_media_by_tags(
         *tags: str,
         limit: int = None,
         offset: int = None,
@@ -101,7 +101,7 @@ def get_files_with_every_tag(
     ):
     common.open_connection_if_not_opened()
     cursor = common.connection.cursor()
-    base_sql_code_block = "SELECT file_path from content where "
+    base_sql_code_block = "SELECT file_path, content_type, title from content where "
     _requests_fabric(
         *tags,
         limit=limit,
@@ -115,7 +115,7 @@ def get_files_with_every_tag(
     list_files = list()
     file_path = cursor.fetchone()
     while file_path is not None:
-        list_files.append(pathlib.Path(file_path[0]))
+        list_files.append(file_path)
         file_path = cursor.fetchone()
     if order_by == ORDERING_BY.RANDOM:
         random.shuffle(list_files)
