@@ -80,7 +80,14 @@ def _get_category_of_tag(cursor, tag_name):
 
     get_tag_category_query = "SELECT category FROM tag WHERE title=%s;"
     cursor.execute(get_tag_category_query, (tag_name.replace("_", " "),))
-    return cursor.fetchone()
+    raw_categories = cursor.fetchall()
+    if raw_categories is not None:
+        categories_list = set()
+        for raw_category in raw_categories:
+            categories_list.add(raw_category[0])
+        if len(categories_list):
+            return categories_list
+    return None
 
 
 def get_category_of_tag(tag_name, connection):
