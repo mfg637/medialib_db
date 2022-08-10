@@ -168,3 +168,10 @@ def get_tags_by_content_id(content_id, auto_open_connection=True):
     if auto_open_connection:
         common.close_connection_if_not_closed()
     return result
+
+
+def find_content_from_source(origin, origin_content_id, connection):
+    sql_template = "SELECT ID, file_path FROM content WHERE origin=%s and origin_content_id=%s"
+    cursor = connection.cursor()
+    cursor.execute(sql_template, (origin, origin_content_id))
+    return cursor.fetchone()
