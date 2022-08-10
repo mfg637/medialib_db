@@ -4,6 +4,7 @@ from . import files_by_tag_search
 from . import common
 from . import tags_indexer
 from . import srs_indexer
+from . import config
 
 
 def get_tag_name_by_alias(alias):
