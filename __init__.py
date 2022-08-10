@@ -44,7 +44,7 @@ def get_thumbnail(path: pathlib.Path, width:int, height:int, _format: str, conne
         return None, None
 
 
-def register_thumbnail(source_file: pathlib.Path, width:int, height:int, _format:str, connection):
+def register_thumbnail(source_file: pathlib.Path, width: int, height: int, _format: str, connection):
     #if auto_open_connection:
     #    common.open_connection_if_not_opened()
     sql_template_get_id = "SELECT ID from content WHERE file_path=%s"
@@ -62,6 +62,13 @@ def register_thumbnail(source_file: pathlib.Path, width:int, height:int, _format
     connection.commit()
     #    common.close_connection_if_not_closed()
     return content_id, thumbnail_file_name
+
+
+def drop_thumbnails(content_id, connection):
+    sql_template_get_id = "DELETE FROM thumbnail WHERE content_id=%s"
+    cursor = connection.cursor()
+    cursor.execute(sql_template_get_id, (content_id,))
+    connection.commit()
 
 
 def content_update(content_id, content_title, origin_name, origin_id, hidden, description, auto_open_connection):
