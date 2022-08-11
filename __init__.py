@@ -4,6 +4,7 @@ from . import files_by_tag_search
 from . import common
 from . import tags_indexer
 from . import srs_indexer
+from . import config
 
 
 def get_tag_name_by_alias(alias):
@@ -43,7 +44,7 @@ def get_thumbnail(path: pathlib.Path, width:int, height:int, _format: str, conne
         return None, None
 
 
-def register_thumbnail(source_file: pathlib.Path, width:int, height:int, _format:str, connection):
+def register_thumbnail(source_file: pathlib.Path, width: int, height: int, _format: str, connection):
     #if auto_open_connection:
     #    common.open_connection_if_not_opened()
     sql_template_get_id = "SELECT ID from content WHERE file_path=%s"
@@ -61,6 +62,13 @@ def register_thumbnail(source_file: pathlib.Path, width:int, height:int, _format
     connection.commit()
     #    common.close_connection_if_not_closed()
     return content_id, thumbnail_file_name
+
+
+def drop_thumbnails(content_id, connection):
+    sql_template_get_id = "DELETE FROM thumbnail WHERE content_id=%s"
+    cursor = connection.cursor()
+    cursor.execute(sql_template_get_id, (content_id,))
+    connection.commit()
 
 
 def content_update(content_id, content_title, origin_name, origin_id, hidden, description, auto_open_connection):
@@ -160,3 +168,23 @@ def get_tags_by_content_id(content_id, auto_open_connection=True):
     if auto_open_connection:
         common.close_connection_if_not_closed()
     return result
+
+
+def find_content_from_source(origin, origin_content_id, connection) -> tuple[int, str]:
+    """
+    Search content by origin content ID
+    :rtype: content_id: int, file_path: str
+    """
+    sql_template = "SELECT ID, file_path FROM content WHERE origin=%s and origin_content_id=%s"
+    cursor = connection.cursor()
+    cursor.execute(sql_template, (origin, origin_content_id))
+    result = cursor.fetchone()
+    cursor.fetchall()
+    return result
+
+
+def update_file_path(content_id, file_path, connection):
+    sql_template = "UPDATE content SET file_path=%s, addition_date=NOW() WHERE ID=%s"
+    cursor = connection.cursor()
+    cursor.execute(sql_template, (file_path, content_id))
+    connection.commit()
