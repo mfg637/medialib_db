@@ -180,3 +180,23 @@ def get_tags_by_content_id(content_id, auto_open_connection=True):
     if auto_open_connection:
         common.close_connection_if_not_closed()
     return result
+
+
+def find_content_from_source(origin, origin_content_id, connection) -> tuple[int, str]:
+    """
+    Search content by origin content ID
+    :rtype: content_id: int, file_path: str
+    """
+    sql_template = "SELECT ID, file_path FROM content WHERE origin=%s and origin_content_id=%s"
+    cursor = connection.cursor()
+    cursor.execute(sql_template, (origin, origin_content_id))
+    result = cursor.fetchone()
+    cursor.fetchall()
+    return result
+
+
+def update_file_path(content_id, file_path, connection):
+    sql_template = "UPDATE content SET file_path=%s, addition_date=NOW() WHERE ID=%s"
+    cursor = connection.cursor()
+    cursor.execute(sql_template, (file_path, content_id))
+    connection.commit()
