@@ -17,12 +17,24 @@ def get_tag_name_by_alias(alias):
     return result
 
 
-def get_file_data_by_file_path(path: pathlib.Path, auto_open_connection=True):
+def get_content_metadata_by_file_path(path: pathlib.Path, auto_open_connection=True):
     if auto_open_connection:
         common.open_connection_if_not_opened()
     sql_template = "SELECT * FROM content WHERE file_path=%s"
     cursor = common.connection.cursor()
     cursor.execute(sql_template, (str(path),))
+    result = cursor.fetchone()
+    if auto_open_connection:
+        common.close_connection_if_not_closed()
+    return result
+
+
+def get_content_metadata_by_content_id(content_id: int, auto_open_connection=True):
+    if auto_open_connection:
+        common.open_connection_if_not_opened()
+    sql_template = "SELECT * FROM content WHERE ID=%s"
+    cursor = common.connection.cursor()
+    cursor.execute(sql_template, (content_id,))
     result = cursor.fetchone()
     if auto_open_connection:
         common.close_connection_if_not_closed()

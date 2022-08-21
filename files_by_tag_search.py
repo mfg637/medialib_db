@@ -101,7 +101,7 @@ def get_media_by_tags(
     ):
     common.open_connection_if_not_opened()
     cursor = common.connection.cursor()
-    base_sql_code_block = "SELECT file_path, content_type, title from content where "
+    base_sql_code_block = "SELECT ID, file_path, content_type, title from content where "
     _requests_fabric(
         *tags,
         limit=limit,
