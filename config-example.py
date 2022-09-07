@@ -1,6 +1,7 @@
 import pathlib
 
-db_host = ""
+db_host = "medialib"
+db_test = "medialib_test"
 db_name = ""
 db_user = ""
 db_password = ""

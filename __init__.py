@@ -2,6 +2,7 @@ import pathlib
 
 from . import files_by_tag_search
 from . import common
+from . import testing
 from . import tags_indexer
 from . import srs_indexer
 from . import config

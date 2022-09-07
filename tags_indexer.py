@@ -1,3 +1,4 @@
+import logging
 import pathlib
 import datetime
 import re
@@ -14,15 +15,19 @@ try:
 except ImportError:
     import common
 
+logger = logging.getLogger(__name__)
+
 
 def _request(request_body, *args, connection):
     cursor = connection.cursor()
     return request_body(cursor, *args)
 
 
-def _check_tag_exists(cursor, tag_name:str, tag_category:str):
-    sql_select_tag_query = "SELECT ID FROM `tag` WHERE title = %s and category = %s"
-    cursor.execute(sql_select_tag_query, (tag_name.replace("_", " "), tag_category))
+def _check_tag_exists(cursor, tag_name: str, tag_category: str):
+    sql_select_tag_query = "SELECT ID FROM tag WHERE title=%s and category=%s"
+    _tag_name = tag_name.replace("_", " ")
+    logger.debug("query=\"{}\" title=\"{}\" category=\"{}\"".format(sql_select_tag_query, _tag_name, tag_category))
+    cursor.execute(sql_select_tag_query, (_tag_name, tag_category))
     # returns ID of tag
     return cursor.fetchone()
 

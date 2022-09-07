@@ -1,5 +1,6 @@
 import json
 import argparse
+import logging
 import pathlib
 
 import mysql.connector
@@ -21,6 +22,8 @@ try:
 except ImportError:
     import tags_indexer
 import datetime
+
+logger = logging.getLogger(__name__)
 
 
 MEDIA_TYPE_CODES = {
@@ -53,6 +56,7 @@ def register(
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
             tag_id = tags_indexer.check_tag_exists(tag_name, _category, connection)
+            logger.debug("tag_id={}".format(tag_id.__repr__()))
             if tag_id is None:
                 tag_id = tags_indexer.insert_new_tag(tag_name, _category, tag_alias, connection)
             else:
