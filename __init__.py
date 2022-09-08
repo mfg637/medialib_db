@@ -11,7 +11,7 @@ from . import config
 def get_tag_name_by_alias(alias):
     common.open_connection_if_not_opened()
     cursor = common.connection.cursor()
-    sql_template = "SELECT title FROM tag WHERE ID = (SELECT tag_id FROM tag_alias WHERE title=%s)"
+    sql_template = "SELECT title FROM tag WHERE id = (SELECT tag_id FROM tag_alias WHERE title=%s)"
     cursor.execute(sql_template, (alias,))
     result = cursor.fetchone()[0]
     common.close_connection_if_not_closed()
@@ -33,7 +33,7 @@ def get_content_metadata_by_file_path(path: pathlib.Path, auto_open_connection=T
 def get_content_metadata_by_content_id(content_id: int, auto_open_connection=True):
     if auto_open_connection:
         common.open_connection_if_not_opened()
-    sql_template = "SELECT * FROM content WHERE ID=%s"
+    sql_template = "SELECT * FROM content WHERE id=%s"
     cursor = common.connection.cursor()
     cursor.execute(sql_template, (content_id,))
     result = cursor.fetchone()
@@ -45,7 +45,9 @@ def get_content_metadata_by_content_id(content_id: int, auto_open_connection=Tru
 def get_thumbnail(path: pathlib.Path, width:int, height:int, _format: str, connection):
     #if auto_open_connection:
     #    common.open_connection_if_not_opened()
-    sql_template = "SELECT file_path, format FROM thumbnail WHERE content_id=(SELECT ID FROM content WHERE file_path=%s) and width=%s and height=%s and format=%s"
+    sql_template = ("SELECT file_path, format FROM thumbnail "
+                    "WHERE content_id = (SELECT ID FROM content WHERE file_path=%s) "
+                    "and width = %s and height = %s and format = %s")
     cursor = connection.cursor()
     cursor.execute(sql_template, (str(path), width, height, _format))
     result = cursor.fetchone()
@@ -60,8 +62,8 @@ def get_thumbnail(path: pathlib.Path, width:int, height:int, _format: str, conne
 def register_thumbnail(source_file: pathlib.Path, width: int, height: int, _format: str, connection):
     #if auto_open_connection:
     #    common.open_connection_if_not_opened()
-    sql_template_get_id = "SELECT ID from content WHERE file_path=%s"
-    sql_template_register = "INSERT INTO thumbnail VALUE (%s, %s, %s, NOW(), %s, %s)"
+    sql_template_get_id = "SELECT id from content WHERE file_path=%s"
+    sql_template_register = "INSERT INTO thumbnail VALUES (%s, %s, %s, NOW(), %s, %s)"
     cursor = connection.cursor()
     print(sql_template_get_id, (str(source_file),))
     cursor.execute(sql_template_get_id, (str(source_file),))
@@ -78,7 +80,7 @@ def register_thumbnail(source_file: pathlib.Path, width: int, height: int, _form
 
 
 def drop_thumbnails(content_id, connection):
-    sql_template_get_id = "DELETE FROM thumbnail WHERE content_id=%s"
+    sql_template_get_id = "DELETE FROM thumbnail WHERE content_id = %s"
     cursor = connection.cursor()
     cursor.execute(sql_template_get_id, (content_id,))
     connection.commit()
@@ -87,8 +89,11 @@ def drop_thumbnails(content_id, connection):
 def content_update(content_id, content_title, origin_name, origin_id, hidden, description, auto_open_connection):
     if auto_open_connection:
         common.open_connection_if_not_opened()
-    sql_template = \
-        "UPDATE content SET title=%s, origin=%s, origin_content_id=%s, hidden=%s, description=%s WHERE ID=%s"
+    sql_template = (
+        "UPDATE content "
+        "SET title = %s, origin = %s, origin_content_id = %s, hidden = %s, description = %s "
+        "WHERE id = %s"
+    )
     cursor = common.connection.cursor()
     cursor.execute(sql_template, (content_title, origin_name, origin_id, hidden, description, content_id,))
     common.connection.commit()
@@ -109,7 +114,7 @@ def content_register(
         content_id=None,
         auto_open_connection=True
 ):
-    sql_template = "INSERT INTO content VALUE (NULL, %s, %s, %s, %s, %s, %s, %s, %s)"
+    sql_template = "INSERT INTO content VALUES (DEFAULT, %s, %s, %s, %s, %s, %s, %s, %s)"
     if auto_open_connection:
         common.open_connection_if_not_opened()
     cursor = common.connection.cursor()
@@ -125,7 +130,7 @@ def content_register(
                        hidden
                    )
                    )
-    content_id = cursor.lastrowid
+    content_id = cursor.fetchone()[0]
     common.connection.commit()
     if auto_open_connection:
         common.close_connection_if_not_closed()
@@ -140,7 +145,7 @@ def add_tags_for_content(content_id, tags: list[tuple[str, str, str]], auto_open
         if tag[1] is not None:
             tag_id = tags_indexer.check_tag_exists(tag[0], tag[1], common.connection)
         else:
-            get_id_by_tag_alias_sql = "SELECT tag_id FROM tag_alias WHERE title=%s"
+            get_id_by_tag_alias_sql = "SELECT tag_id FROM tag_alias WHERE title = %s"
             cursor = common.connection.cursor()
             cursor.execute(get_id_by_tag_alias_sql, (tag[2],))
             tag_id = cursor.fetchone()
@@ -166,8 +171,8 @@ def add_tags_for_content(content_id, tags: list[tuple[str, str, str]], auto_open
 def get_tags_by_content_id(content_id, auto_open_connection=True):
     if auto_open_connection:
         common.open_connection_if_not_opened()
-    sql_template = ("SELECT title, category FROM tag where ID in "
-                    "(SELECT tag_id from content_tags_list where content_id=%s)")
+    sql_template = ("SELECT title, category FROM tag where id in "
+                    "(SELECT tag_id from content_tags_list where content_id = %s)")
     cursor = common.connection.cursor()
     cursor.execute(sql_template, (content_id,))
     result = dict()
@@ -188,7 +193,7 @@ def find_content_from_source(origin, origin_content_id, connection) -> tuple[int
     Search content by origin content ID
     :rtype: content_id: int, file_path: str
     """
-    sql_template = "SELECT ID, file_path FROM content WHERE origin=%s and origin_content_id=%s"
+    sql_template = "SELECT ID, file_path FROM content WHERE origin = %s and origin_content_id = %s"
     cursor = connection.cursor()
     cursor.execute(sql_template, (origin, origin_content_id))
     result = cursor.fetchone()
@@ -197,7 +202,7 @@ def find_content_from_source(origin, origin_content_id, connection) -> tuple[int
 
 
 def update_file_path(content_id, file_path, connection):
-    sql_template = "UPDATE content SET file_path=%s, addition_date=NOW() WHERE ID=%s"
+    sql_template = "UPDATE content SET file_path = %s, addition_date=NOW() WHERE ID = %s"
     cursor = connection.cursor()
     cursor.execute(sql_template, (file_path, content_id))
     connection.commit()

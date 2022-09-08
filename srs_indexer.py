@@ -64,8 +64,8 @@ def register(
             _tags.append((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
-        "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) VALUES"
-        "(NULL, %s, %s, %s, %s, NOW(), %s, %s, FALSE)"
+        "(id, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) "
+        "VALUES (DEFAULT, %s, %s, %s, %s, NOW(), %s, %s, FALSE) RETURNING id"
     )
     try:
         cursor.execute(
@@ -82,7 +82,7 @@ def register(
     except mysql.connector.errors.IntegrityError:
         # triggers in same file path case (file exists)
         return
-    content_id = cursor.lastrowid
+    content_id = cursor.fetchone()[0]
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
     for tag in _tags:
         cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
@@ -142,8 +142,8 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
             tags.append((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
-        "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) VALUES"
-        "(NULL, %s, %s, %s, %s, %s, %s, %s, FALSE)"
+        "(id, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden)"
+        " VALUES (DEFAULT, %s, %s, %s, %s, %s, %s, %s, FALSE) RETURNING id"
     )
     cursor.execute(
         sql_insert_content_query,
@@ -157,14 +157,14 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
             origin_id
         )
     )
-    content_id = cursor.lastrowid
+    content_id = cursor.fetchone()[0]
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
     for tag in tags:
         try:
             cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
         except mysql.connector.IntegrityError:
-            get_content_id = "SELECT ID FROM content WHERE file_path=%s"
-            get_tag_id = "SELECT ID FROM tag WHERE title=%s and category=%s"
+            get_content_id = "SELECT id FROM content WHERE file_path = %s"
+            get_tag_id = "SELECT id FROM tag WHERE title = %s and category = %s"
             cursor.execute(get_content_id, (str(file_path.relative_to(config.relative_to)),))
             content_id = cursor.fetchone()
             if content_id is None:
@@ -203,7 +203,8 @@ def verify_exists(auto_open_connection=True):
 
     for file in deleted_list:
         print(file)
-        sql_delete_tags = "DELETE FROM content_tags_list WHERE content_id = (SELECT ID FROM content WHERE file_path = %s)"
+        sql_delete_tags = \
+            "DELETE FROM content_tags_list WHERE content_id = (SELECT id FROM content WHERE file_path = %s)"
         cursor.execute(sql_delete_tags, (file,))
         sql_delete_file_query = "DELETE FROM content WHERE file_path = %s"
         cursor.execute(sql_delete_file_query, (file,))

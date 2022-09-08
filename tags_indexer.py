@@ -3,7 +3,7 @@ import pathlib
 import datetime
 import re
 
-import mysql.connector.errors
+import psycopg2
 
 try:
     from . import config
@@ -42,22 +42,26 @@ def check_tag_exists(tag_name, tag_category, connection) -> tuple[int,]:
 
 def _insert_new_tag(cursor, tag_name: str, tag_category, tag_alias):
     _tag_name = tag_name.replace("_", " ")
-    sql_insert_tag_query = "INSERT INTO `tag` (`ID`, title, category) VALUE (NULL, %s, %s)"
+    sql_insert_tag_query = "INSERT INTO tag (id, title, category) VALUES (DEFAULT, %s, %s) RETURNING id"
     cursor.execute(sql_insert_tag_query, (_tag_name, tag_category))
-    tag_id = cursor.lastrowid
-    sql_insert_alias_query = "INSERT INTO `tag_alias` (`ID`, tag_id, title) VALUE (NULL, %s, %s)"
+    tag_id = cursor.fetchone()[0]
+    logger.debug("_insert_new_tag last row id={}".format(tag_id))
+    sql_insert_alias_query = "INSERT INTO tag_alias (tag_id, title) VALUES (%s, %s)"
     try:
         cursor.execute(sql_insert_alias_query, (tag_id, tag_alias))
-    except mysql.connector.errors.IntegrityError as e:
-        get_tag_info = "SELECT tag.category, ID from tag where ID=(SELECT tag_id from tag_alias where tag_alias.title=%s)"
+    except psycopg2.IntegrityError as e:
+        get_tag_info = (
+            "SELECT tag.category, ID from tag "
+            "where id=(SELECT tag_id from tag_alias where tag_alias.title=%s)"
+        )
         cursor.execute(get_tag_info, (_tag_name,))
         response = cursor.fetchone()
-        remove_duplicate = "DELETE FROM tag where ID=%s"
+        remove_duplicate = "DELETE FROM tag where id = %s"
         cursor.execute(remove_duplicate, (tag_id, ))
         _category = response[0]
         tag_id = response[1]
         if _category == "content":
-            update_category = "UPDATE tag Set category=%s where ID=%s"
+            update_category = "UPDATE tag set category = %s where id = %s"
             cursor.execute(update_category, (tag_category, tag_id))
             return tag_id
         elif tag_category == "content":
@@ -83,7 +87,7 @@ def _get_category_of_tag(cursor, tag_name):
     def mysql_escafe_quotes(_string):
         return re.sub("\"", "\\\"", _string)
 
-    get_tag_category_query = "SELECT category FROM tag WHERE title=%s;"
+    get_tag_category_query = "SELECT category FROM tag WHERE title = %s;"
     cursor.execute(get_tag_category_query, (tag_name.replace("_", " "),))
     raw_categories = cursor.fetchall()
     if raw_categories is not None:

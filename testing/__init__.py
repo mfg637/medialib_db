@@ -1,7 +1,7 @@
 try:
-    import mysql.connector
+    import psycopg2
 except ImportError:
-    raise Exception("Mysql connector not properly installed")
+    raise Exception("Connector psycopq2 not properly installed")
 
 try:
     from .. import config
@@ -10,7 +10,7 @@ except ImportError:
 
 
 def make_connection():
-    return mysql.connector.connect(
+    return psycopg2.connect(
         host=config.db_host, database=config.db_test, user=config.db_user, password=config.db_password
     )
 
@@ -23,9 +23,8 @@ def wipe():
         "DELETE FROM tag_alias",
         "DELETE FROM content",
         "DELETE FROM tag",
-        "ALTER TABLE content AUTO_INCREMENT = 0",
-        "ALTER TABLE tag_alias AUTO_INCREMENT = 0",
-        "ALTER TABLE tag AUTO_INCREMENT = 0"
+        "ALTER SEQUENCE content_id_seq RESTART WITH 1",
+        "ALTER SEQUENCE tag_id_seq RESTART WITH 1"
     ]
     cursor = connection.cursor()
     for sql_resuest in sql_resuests:
