@@ -18,32 +18,13 @@ def main():
     postgres_insert_tag_alias = "INSERT INTO tag_alias (tag_id, title) VALUES (%s, %s)"
     postgres_get_tag_id = "SELECT id FROM tag WHERE title = %s and category = %s"
 
-    def postgres_string_format(tag_name, size):
-        if tag_name is None:
-            return None
-        elif len(tag_name) > size:
-            words = []
-            if "_" in tag_name:
-                words = tag_name.split("_")
-            else:
-                words = tag_name.split(" ")
-            new_tag_name = ""
-            words_copy = 1
-            words_count = len(words)
-            while len(" ".join(words[:words_copy + 1])+"...") < size \
-                    and words_copy < words_count:
-                words_copy += 1
-            new_tag_name = " ".join(words)+"..."
-            return new_tag_name[:size]
-        return tag_name
-
     exists_tags_list = set()
 
     for tag_data in tags_list:
         if tag_data[2] == "original character":
-            tag = (postgres_string_format(tag_data[1], 32), "character")
+            tag = (common.postgres_string_format(tag_data[1], 32), "character")
         else:
-            tag = (postgres_string_format(tag_data[1], 32), tag_data[2])
+            tag = (common.postgres_string_format(tag_data[1], 32), tag_data[2])
         if tag not in exists_tags_list:
             exists_tags_list.add(tag)
             postgres_cursor.execute(

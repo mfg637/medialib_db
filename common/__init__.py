@@ -42,3 +42,23 @@ def close_connection_if_not_closed():
     if connection is not None:
         connection.close()
         connection = None
+
+
+def postgres_string_format(tag_name, size):
+    if tag_name is None:
+        return None
+    elif len(tag_name) > size:
+        words = []
+        if "_" in tag_name:
+            words = tag_name.split("_")
+        else:
+            words = tag_name.split(" ")
+        new_tag_name = ""
+        words_copy = 1
+        words_count = len(words)
+        while len(" ".join(words[:words_copy + 1])+"...") < size \
+                and words_copy < words_count:
+            words_copy += 1
+        new_tag_name = " ".join(words)+"..."
+        return new_tag_name[:size]
+    return tag_name
