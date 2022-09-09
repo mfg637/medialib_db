@@ -58,6 +58,8 @@ create table tag_alias
         foreign key (tag_id) references tag (ID)
 );
 
+create index tag_alias_index on tag_alias (title);
+
 CREATE PROCEDURE get_tags_ids (IN tag_alias_name VARCHAR(251))
 language sql
 as $$
