@@ -20,7 +20,7 @@ create table content
 );
 
 create type T_CATEGORY as enum
-    ('artist', 'set', 'copyright', 'original character', 'rating', 'species', 'content', 'character');
+    ('artist', 'set', 'copyright', 'rating', 'species', 'content', 'character');
 
 create table tag
 (
