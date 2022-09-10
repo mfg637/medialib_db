@@ -47,6 +47,11 @@ def _insert_new_tag(cursor, tag_name: str, tag_category, tag_alias):
     tag_id = cursor.fetchone()[0]
     logger.debug("_insert_new_tag last row id={}".format(tag_id))
     sql_insert_alias_query = "INSERT INTO tag_alias (tag_id, title) VALUES (%s, %s)"
+    logger.debug("tag {} ({}) alias insert: {} ".format(
+        _tag_name,
+        tag_category,
+        tag_alias
+    ))
     try:
         cursor.execute(sql_insert_alias_query, (tag_id, tag_alias))
     except psycopg2.IntegrityError as e:
