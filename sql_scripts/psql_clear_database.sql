@@ -1,3 +1,4 @@
+DELETE FROM thumbnail;
 DELETE FROM content_tags_list;
 DELETE FROM tag_alias;
 DELETE FROM content;
