@@ -18,23 +18,19 @@ def get_tag_name_by_alias(alias):
     return result
 
 
-def get_content_metadata_by_file_path(path: pathlib.Path, auto_open_connection=True):
-    connection = common.make_connection()
+def get_content_metadata_by_file_path(path: pathlib.Path, connection):
     cursor = connection.cursor()
     sql_template = "SELECT * FROM content WHERE file_path=%s"
     cursor.execute(sql_template, (str(path),))
     result = cursor.fetchone()
-    connection.close()
     return result
 
 
-def get_content_metadata_by_content_id(content_id: int, auto_open_connection=True):
-    connection = common.make_connection()
+def get_content_metadata_by_content_id(content_id: int, connection):
     cursor = connection.cursor()
     sql_template = "SELECT * FROM content WHERE id=%s"
     cursor.execute(sql_template, (content_id,))
     result = cursor.fetchone()
-    connection.close()
     return result
 
 
@@ -74,8 +70,7 @@ def drop_thumbnails(content_id, connection):
     connection.commit()
 
 
-def content_update(content_id, content_title, origin_name, origin_id, hidden, description, auto_open_connection):
-    connection = common.make_connection()
+def content_update(content_id, content_title, origin_name, origin_id, hidden, description, connection):
     cursor = connection.cursor()
     sql_template = (
         "UPDATE content "
@@ -84,10 +79,10 @@ def content_update(content_id, content_title, origin_name, origin_id, hidden, de
     )
     cursor.execute(sql_template, (content_title, origin_name, origin_id, hidden, description, content_id,))
     connection.commit()
-    connection.close()
 
 
 def content_register(
+        connection,
         content_title,
         file_path,
         content_type,
@@ -97,11 +92,9 @@ def content_register(
         origin_id,
         hidden=False,
         *,
-        content_id=None,
-        auto_open_connection=True
+        content_id=None
 ):
     sql_template = "INSERT INTO content VALUES (DEFAULT, %s, %s, %s, %s, %s, %s, %s, %s)"
-    connection = common.make_connection()
     cursor = connection.cursor()
     cursor.execute(sql_template,
                    (
@@ -117,12 +110,10 @@ def content_register(
                    )
     content_id = cursor.fetchone()[0]
     connection.commit()
-    connection.close()
     return content_id
 
 
-def add_tags_for_content(content_id, tags: list[tuple[str, str, str]], auto_open_connection=True):
-    connection = common.make_connection()
+def add_tags_for_content(content_id, tags: list[tuple[str, str, str]], connection):
     cursor = connection.cursor()
     for tag in tags:
         tag_id = None
@@ -146,7 +137,6 @@ def add_tags_for_content(content_id, tags: list[tuple[str, str, str]], auto_open
         cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag_id))
 
     connection.commit()
-    connection.close()
 
 
 def get_tags_by_content_id(content_id, auto_open_connection=True):
