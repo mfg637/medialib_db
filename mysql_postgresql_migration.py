@@ -22,9 +22,15 @@ def main():
 
     for tag_data in tags_list:
         if tag_data[2] == "original character":
-            tag = (common.postgres_string_format(tag_data[1], 32), "character")
+            tag = (
+                common.postgres_string_format(tag_data[1], common.TAG_TITLE_MAX_SIZE),
+                "character"
+            )
         else:
-            tag = (common.postgres_string_format(tag_data[1], 32), tag_data[2])
+            tag = (
+                common.postgres_string_format(tag_data[1], common.TAG_TITLE_MAX_SIZE),
+                tag_data[2]
+            )
         if tag not in exists_tags_list:
             exists_tags_list.add(tag)
             postgres_cursor.execute(
@@ -82,33 +88,35 @@ def main():
         )
         postgresql_connection.commit()
 
-    # mysql_get_content = "SELECT * FROM content"
-    # mysql_cursor.execute(mysql_get_content, tuple())
-    # raw_content_list = mysql_cursor.fetchall()
+    mysql_get_content = "SELECT * FROM content"
+    mysql_cursor.execute(mysql_get_content, tuple())
+    raw_content_list = mysql_cursor.fetchall()
     # mysql_get_tags_by_content_id = (
     #     "SELECT title, category FROM tag WHERE ID IN "
     #     "(SELECT tag_id from content_tags_list WHERE content_id = %s)"
     # )
-    # postgres_insert_content = (
-    #     "INSERT INTO content "
-    #     "(id, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) "
-    #     "VALUES (DEFAULT, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
-    # )
+    postgres_insert_content = (
+        "INSERT INTO content "
+        "(id, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) "
+        "VALUES (DEFAULT, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
+    )
     # postgres_content_tag_connect = (
     #     "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
     # )
-    # for raw_content_data in raw_content_list:
-    #     content_data = []
-    #     content_data.append(raw_content_data[1])
-    #     content_data.append(postgres_string_format(raw_content_data[2], 64))
-    #     content_data.extend(raw_content_data[3:-1])
-    #     content_data.append(bool(raw_content_data))
-    #     postgres_cursor.execute(
-    #         postgres_insert_content,
-    #         tuple(content_data)
-    #     )
-    #     postgres_content_id = postgres_cursor.fetchone()
-    #     postgresql_connection.commit()
+    for raw_content_data in raw_content_list:
+        content_data = []
+        content_data.append(raw_content_data[1])
+        content_data.append(
+            common.postgres_string_format(raw_content_data[2], common.CONTENT_TITLE_MAX_SIZE)
+        )
+        content_data.extend(raw_content_data[3:-1])
+        content_data.append(bool(raw_content_data))
+        postgres_cursor.execute(
+            postgres_insert_content,
+            tuple(content_data)
+        )
+        postgres_content_id = postgres_cursor.fetchone()
+        postgresql_connection.commit()
 
 
 if __name__ == "__main__":

@@ -8,12 +8,12 @@ create table content
 (
     ID                serial primary key,
     file_path         text                                           not null,
-    title             char(64)                                       null,
+    title             varchar(64)                                    null,
     content_type      T_CONTENT_TYPE                                 not null,
     description       text                                           null,
     addition_date     timestamp                                      not null,
-    origin            char(32)                                       null,
-    origin_content_id char(64)                                       null,
+    origin            varchar(32)                                    null,
+    origin_content_id varchar(128)                                   null,
     hidden            boolean default FALSE                          not null,
     constraint file_path
         unique (file_path)
@@ -24,10 +24,10 @@ create type T_CATEGORY as enum
 
 create table tag
 (
-    ID       bigserial  primary key,
-    title    char(32)   null,
-    category T_CATEGORY null,
-    parent   bigint     null,
+    ID       bigserial      primary key,
+    title    varchar(240)   null,
+    category T_CATEGORY     null,
+    parent   bigint         null,
     constraint uniq_tag
         unique (title, category),
     constraint tag_ibfk_1
@@ -50,8 +50,8 @@ create table content_tags_list
 
 create table tag_alias
 (
-    tag_id bigint          not null,
-    title  char(64)        not null,
+    tag_id bigint              not null,
+    title  varchar(255)        not null,
     constraint title
         unique (title),
     constraint tag_alias_FK
@@ -60,7 +60,7 @@ create table tag_alias
 
 create index tag_alias_index on tag_alias (title);
 
-CREATE PROCEDURE get_tags_ids (IN tag_alias_name char(64))
+CREATE PROCEDURE get_tags_ids (IN tag_alias_name varchar(255))
 language sql
 as $$
     -- taken from https://stackoverflow.com/a/33737203
@@ -81,12 +81,12 @@ $$;
 
 CREATE TABLE thumbnail
 (
-	content_id      int4      not null,
-	width           int2      not null,
-	height          int2      not null,
-	generation_date timestamp not null,
-	format          char(8)   not null,
-	file_path       text      not null,
+	content_id      int4         not null,
+	width           int2         not null,
+	height          int2         not null,
+	generation_date timestamp    not null,
+	format          varchar(8)   not null,
+	file_path       text         not null,
     primary key (content_id, width, height, format),
 	foreign key (content_id) references content(ID)
 );

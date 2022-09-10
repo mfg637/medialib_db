@@ -16,6 +16,14 @@ except ImportError:
 connection = None
 
 
+CONTENT_TITLE_MAX_SIZE = 64
+CONTENT_ORIGIN_MAX_SIZE = 32
+CONTENT_ORIGIN_ID_MAX_SIZE = 128
+TAG_TITLE_MAX_SIZE = 240
+TAG_ALIAS_MAX_SIZE = 255
+THUMBNAIL_FORMAT_MAX_SIZE = 8
+
+
 def open_connection_if_not_opened():
     global connection
     global db_lock
