@@ -60,9 +60,9 @@ create table tag_alias
 
 create index tag_alias_index on tag_alias (title);
 
-CREATE PROCEDURE get_tags_ids (IN tag_alias_name char(64))
-language sql
-as $$
+CREATE FUNCTION get_tags_ids (IN tag_alias_name char(64))
+RETURNS TABLE (id bigint)
+language sql as $$
     -- taken from https://stackoverflow.com/a/33737203
     with recursive get_tags_ids_r (id, parent_id) as (
         select      ID,
