@@ -121,6 +121,10 @@ def content_register(
     return content_id
 
 
+sql_insert_content_id_to_tag_id = \
+    "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
+
+
 def add_tags_for_content(content_id, tags: list[tuple[str, str, str]], auto_open_connection=True):
     connection = common.make_connection()
     cursor = connection.cursor()
@@ -140,13 +144,20 @@ def add_tags_for_content(content_id, tags: list[tuple[str, str, str]], auto_open
         else:
             raise Exception("Not registered tag error", tag[0])
 
-
-        sql_insert_content_id_to_tag_id = \
-            "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
         cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag_id))
 
     connection.commit()
     connection.close()
+
+
+def connect_tag_by_id(content_id, tag_id, connection):
+    cursor = connection.cursor()
+    sql_validate_tag_connected = "SELECT * FROM content_tags_list WHERE content_id = %s and tag_id = %s"
+    cursor.execute(sql_validate_tag_connected, (content_id, tag_id))
+    connection_exists = cursor.fetchone()
+    if connection_exists is None:
+        cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag_id))
+    connection.commit()
 
 
 def get_tags_by_content_id(content_id, auto_open_connection=True):

@@ -1,6 +1,5 @@
 import logging
-import pathlib
-import datetime
+import psycopg2.errors
 import re
 
 import psycopg2
@@ -19,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def _request(request_body, *args, connection):
+    #print(connection, args)
     cursor = connection.cursor()
     return request_body(cursor, *args)
 
@@ -40,10 +40,20 @@ def check_tag_exists(tag_name, tag_category, connection) -> tuple[int,]:
     return _request(_check_tag_exists, tag_name, tag_category, connection=connection)
 
 
-def _insert_new_tag(cursor, tag_name: str, tag_category, tag_alias):
+def _insert_new_tag(cursor, tag_name: str, tag_category, tag_alias=None):
+    if tag_alias is None:
+        tag_alias = tag_name
+        if tag_category == "character":
+            tag_alias = "character:{}".format(tag_name)
+        elif tag_category == "artist":
+            tag_alias = "artist:{}".format(tag_name)
     _tag_name = tag_name.replace("_", " ")
     sql_insert_tag_query = "INSERT INTO tag (id, title, category) VALUES (DEFAULT, %s, %s) RETURNING id"
-    cursor.execute(sql_insert_tag_query, (_tag_name, tag_category))
+    try:
+        cursor.execute(sql_insert_tag_query, (_tag_name, tag_category))
+    except psycopg2.errors.UniqueViolation:
+        cursor.connection.rollback()
+        return _check_tag_exists(cursor, _tag_name, tag_category)
     tag_id = cursor.fetchone()[0]
     logger.debug("_insert_new_tag last row id={}".format(tag_id))
     sql_insert_alias_query = "INSERT INTO tag_alias (tag_id, title) VALUES (%s, %s)"
@@ -55,6 +65,7 @@ def _insert_new_tag(cursor, tag_name: str, tag_category, tag_alias):
     try:
         cursor.execute(sql_insert_alias_query, (tag_id, tag_alias))
     except psycopg2.IntegrityError as e:
+        cursor.connection.rollback()
         get_tag_info = (
             "SELECT tag.category, ID from tag "
             "where id=(SELECT tag_id from tag_alias where tag_alias.title=%s)"
