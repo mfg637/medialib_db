@@ -47,12 +47,12 @@ def register(
 
     for tag_category in tags:
         _category = tag_category
-        if tag_category == "characters":
+        if tag_category == "characters" or tag_category == "original character":
             _category = "character"
         for tag in tags[tag_category]:
             tag_name = tag
             tag_alias = tag
-            for special_tag_category in ("artist", "set", "original character"):
+            for special_tag_category in ("artist", "copyright", "character"):
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
             tag_id = tags_indexer.check_tag_exists(tag_name, _category, connection)
@@ -72,7 +72,7 @@ def register(
             sql_insert_content_query,
             (
                 str(file_path.relative_to(config.relative_to)),
-                title,
+                medialib_db.common.postgres_string_format(title, common.CONTENT_TITLE_MAX_SIZE),
                 media_type,
                 description,
                 origin,
