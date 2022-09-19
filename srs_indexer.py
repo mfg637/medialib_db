@@ -45,6 +45,23 @@ def register(
 
     _tags = list()
 
+    sql_check_tag_exists = "SELECT title, category FROM tag WHERE id = %s"
+
+    def verify_tag(tag_id, tag_name=None, tag_category=None):
+        cursor.execute(sql_check_tag_exists, (tag_id,))
+        tag_verify_data = cursor.fetchone()
+        if tag_verify_data is None:
+            if tag_name is not None and tag_category is not None:
+                raise Exception(
+                    "Inserted tag {}({}) actually does\'t exists".format(tag_name, tag_category)
+                )
+            else:
+                raise Exception(
+                    "Inserted tag id{} actually does\'t exists".format(tag_id)
+                )
+        else:
+            logger.debug("Tag exists: {}({})".format(tag_verify_data[0], tag_verify_data[1]))
+
     for tag_category in tags:
         _category = tag_category
         if tag_category == "characters" or tag_category == "original character":
@@ -59,6 +76,7 @@ def register(
             logger.debug("tag_id={}".format(tag_id.__repr__()))
             if tag_id is None:
                 tag_id = tags_indexer.insert_new_tag(tag_name, _category, tag_alias, connection)
+                verify_tag(tag_id, tag_name, tag_category)
             else:
                 tag_id = tag_id[0]
             _tags.append((tag_id, tag_name, _category))
@@ -85,6 +103,7 @@ def register(
     content_id = cursor.fetchone()[0]
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
     for tag in _tags:
+        verify_tag(tag[0])
         cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
 
     connection.commit()

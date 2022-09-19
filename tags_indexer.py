@@ -40,7 +40,8 @@ def check_tag_exists(tag_name, tag_category, connection) -> tuple[int,]:
     return _request(_check_tag_exists, tag_name, tag_category, connection=connection)
 
 
-def _insert_new_tag(cursor, tag_name: str, tag_category, tag_alias=None):
+def _insert_new_tag(connection, tag_name: str, tag_category, tag_alias=None):
+    cursor = connection.cursor()
     if tag_alias is None:
         tag_alias = tag_name
         if tag_category == "character":
@@ -52,7 +53,7 @@ def _insert_new_tag(cursor, tag_name: str, tag_category, tag_alias=None):
     try:
         cursor.execute(sql_insert_tag_query, (_tag_name, tag_category))
     except psycopg2.errors.UniqueViolation:
-        cursor.connection.rollback()
+        connection.rollback()
         return _check_tag_exists(cursor, _tag_name, tag_category)
     tag_id = cursor.fetchone()[0]
     logger.debug("_insert_new_tag last row id={}".format(tag_id))
@@ -88,6 +89,7 @@ def _insert_new_tag(cursor, tag_name: str, tag_category, tag_alias=None):
         cursor.execute(sql_insert_alias_query, (tag_id, tag_alias.replace(" ", "_")))
     elif "_" in tag_alias:
         cursor.execute(sql_insert_alias_query, (tag_id, tag_alias.replace("_", " ")))
+    connection.commit()
     return tag_id
 
 
@@ -96,7 +98,7 @@ def insert_new_tag(tag_name, tag_category, tag_alias, connection) -> int:
     Insert new tag in database's table and returns tag ID.
     :rtype: ID of tag (int)
     """
-    return _request(_insert_new_tag, tag_name, tag_category, tag_alias, connection=connection)
+    return _insert_new_tag(connection, tag_name, tag_category, tag_alias)
 
 
 def _get_category_of_tag(cursor, tag_name):
