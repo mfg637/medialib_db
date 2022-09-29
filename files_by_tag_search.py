@@ -41,7 +41,7 @@ hidden_filtering_constants = {
 
 
 def _requests_fabric(
-        *tags: dict,
+        *tags_groups: dict,
         limit: int = None,
         offset: int = None,
         order_by: ORDERING_BY = ORDERING_BY.NONE,
@@ -57,17 +57,22 @@ def _requests_fabric(
     tags_count = list()
 
     sql_get_tag_ids = "SELECT * FROM get_tags_ids(%s)"
-    for tag in tags:
-        cursor.execute(sql_get_tag_ids, (tag["title"],))
-        recursive_tag_ids = cursor.fetchall()
-        tags_count.append(len(recursive_tag_ids))
-        tag_ids.extend([i[0] for i in recursive_tag_ids])
+    for tags_group in tags_groups:
+        raw_tag_ids = []
+        for tag in tags_group["tags"]:
+            cursor.execute(sql_get_tag_ids, (tag,))
+            raw_tag_ids.extend(cursor.fetchall())
+        tags_count.append(len(raw_tag_ids))
+        _tag_ids = set()
+        for raw_id in raw_tag_ids:
+            _tag_ids.add(raw_id[0])
+        tag_ids.extend(_tag_ids)
 
     print(tag_ids)
 
     tags_set_lists = list()
     for i, val in enumerate(tags_count):
-        if tags[i]["not"]: # not tag
+        if tags_groups[i]["not"]: # not tag
             result_sql_block += get_image_id_by_not_tag_code_block
         else:
             result_sql_block += get_image_id_by_tag_code_block
