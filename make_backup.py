@@ -9,6 +9,7 @@ import tarfile
 import crcmod
 
 import common
+import config
 
 
 @dataclasses.dataclass(frozen=True)
@@ -19,6 +20,7 @@ class TagUnique:
 
 @dataclasses.dataclass
 class ContentDocument:
+    content_id: int
     file_path: pathlib.Path
     title: str
     content_type: str
@@ -67,6 +69,56 @@ def create_tar_file(tar_dump: tarfile.TarFile, buffer: io.StringIO, path: pathli
     tar_tag_info = tarfile.TarInfo(str(path))
     tar_tag_info.size = len(encoded_data)
     tar_dump.addfile(tar_tag_info, data_buffer)
+
+
+def write_srs(tar_dump, srs_file_path: pathlib.Path, content_id):
+    global checksums
+
+    srs_abs_path = config.relative_to.joinpath(srs_file_path)
+    parent_dir_path = srs_abs_path.parent
+
+    raw_data = json.load(srs_abs_path.open("r"))
+    video = None
+    if 'video' in raw_data['streams']:
+        video = raw_data['streams']['video']
+    audio_streams = None
+    if 'audio' in raw_data['streams']:
+        audio_streams = raw_data['streams']['audio']
+    subtitle_streams = None
+    if 'subtitles' in raw_data['streams']:
+        subtitle_streams = raw_data['streams']['subtitles']
+    image = None
+    if 'image' in raw_data['streams']:
+        image = raw_data['streams']['image']
+    streams_metadata = (video, image)
+
+    file_hash = 0
+    with srs_abs_path.open("br") as f:
+        file_hash = crc64(f.read())
+    srs_new_file_path = pathlib.PurePath("content/{}/{}.srs".format(content_id, content_id))
+    checksums.append((file_hash, srs_new_file_path))
+    tar_dump.add(name=str(srs_abs_path), arcname=str(srs_new_file_path))
+
+    files = []
+    if audio_streams is not None:
+        for audio_stream in audio_streams["channels"]:
+            for channel in audio_stream["channels"]:
+                for level in audio_stream["channels"][channel]:
+                    files.append(audio_stream["channels"][channel][level])
+
+    for content_type_streams in streams_metadata:
+        if content_type_streams is not None:
+            for level in content_type_streams["levels"]:
+                files.append(content_type_streams["levels"][level])
+
+    for file in files:
+        file_hash = 0
+        abs_file_path = parent_dir_path.joinpath(file)
+        with abs_file_path.open("br") as f:
+            file_hash = crc64(f.read())
+        new_file_path = pathlib.PurePath("content/{}/{}".format(content_id, file))
+        checksums.append((file_hash, new_file_path))
+        tar_dump.add(name=str(abs_file_path), arcname=str(new_file_path))
 
 
 def main():
@@ -121,6 +173,7 @@ def main():
         for tag_id_wrapped in tag_ids:
             tags.add(tags_processing(tag_id_wrapped[0], cursor))
         content_document = ContentDocument(
+            content_id=content_id,
             file_path=pathlib.Path(content[1]),
             title=content[2],
             content_type=content[3],
@@ -136,6 +189,9 @@ def main():
         json.dump(content_document.json_serializable(), content_document_io)
         content_document_path = pathlib.PurePath("content-metadata/{}.json".format(content_id))
         create_tar_file(tar_dump, content_document_io, content_document_path)
+
+        if content_document.file_path.suffix == ".srs":
+            write_srs(tar_dump, content_document.file_path, content_id)
     tag_uniq_id_io = io.StringIO()
     tag_uniq_id_serialisable = []
     for elem in tag_uniq_id:
