@@ -254,6 +254,8 @@ def main():
                 write_regular(tar_dump, content_document.file_path, content_id)
         except FileNotFoundError as e:
             print("Missing file \"{}\", content id = {}!".format(e.filename, content_id))
+        except xml.parsers.expat.ExpatError as e:
+            print("Invalid MPD file, content id = {}!".format(content_id))
         else:
             create_tar_file(tar_dump, content_document_io, content_document_path)
     tag_uniq_id_io = io.StringIO()
