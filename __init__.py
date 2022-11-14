@@ -94,7 +94,7 @@ def content_register(
         *,
         content_id=None
 ):
-    sql_template = "INSERT INTO content VALUES (DEFAULT, %s, %s, %s, %s, %s, %s, %s, %s)"
+    sql_template = "INSERT INTO content VALUES (DEFAULT, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
     cursor = connection.cursor()
     cursor.execute(sql_template,
                    (
