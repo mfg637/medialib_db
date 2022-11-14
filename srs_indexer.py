@@ -1,5 +1,6 @@
 import json
 import argparse
+import logging
 import pathlib
 
 import mysql.connector
@@ -22,6 +23,8 @@ except ImportError:
     import tags_indexer
 import datetime
 
+logger = logging.getLogger(__name__)
+
 
 MEDIA_TYPE_CODES = {
     0: "image",
@@ -42,33 +45,52 @@ def register(
 
     _tags = list()
 
+    sql_check_tag_exists = "SELECT title, category FROM tag WHERE id = %s"
+
+    def verify_tag(tag_id, tag_name=None, tag_category=None):
+        cursor.execute(sql_check_tag_exists, (tag_id,))
+        tag_verify_data = cursor.fetchone()
+        if tag_verify_data is None:
+            if tag_name is not None and tag_category is not None:
+                raise Exception(
+                    "Inserted tag {}({}) actually does\'t exists".format(tag_name, tag_category)
+                )
+            else:
+                raise Exception(
+                    "Inserted tag id{} actually does\'t exists".format(tag_id)
+                )
+        else:
+            logger.debug("Tag exists: {}({})".format(tag_verify_data[0], tag_verify_data[1]))
+
     for tag_category in tags:
         _category = tag_category
-        if tag_category == "characters":
+        if tag_category == "characters" or tag_category == "original character":
             _category = "character"
         for tag in tags[tag_category]:
             tag_name = tag
             tag_alias = tag
-            for special_tag_category in ("artist", "set", "original character"):
+            for special_tag_category in ("artist", "copyright", "character"):
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
             tag_id = tags_indexer.check_tag_exists(tag_name, _category, connection)
+            logger.debug("tag_id={}".format(tag_id.__repr__()))
             if tag_id is None:
                 tag_id = tags_indexer.insert_new_tag(tag_name, _category, tag_alias, connection)
+                verify_tag(tag_id, tag_name, tag_category)
             else:
                 tag_id = tag_id[0]
             _tags.append((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
-        "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) VALUES"
-        "(NULL, %s, %s, %s, %s, NOW(), %s, %s, FALSE)"
+        "(id, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) "
+        "VALUES (DEFAULT, %s, %s, %s, %s, NOW(), %s, %s, FALSE) RETURNING id"
     )
     try:
         cursor.execute(
             sql_insert_content_query,
             (
                 str(file_path.relative_to(config.relative_to)),
-                title,
+                medialib_db.common.postgres_string_format(title, common.CONTENT_TITLE_MAX_SIZE),
                 media_type,
                 description,
                 origin,
@@ -78,9 +100,10 @@ def register(
     except mysql.connector.errors.IntegrityError:
         # triggers in same file path case (file exists)
         return
-    content_id = cursor.lastrowid
+    content_id = cursor.fetchone()[0]
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
     for tag in _tags:
+        verify_tag(tag[0])
         cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
 
     connection.commit()
@@ -138,8 +161,8 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
             tags.append((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
-        "(ID, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) VALUES"
-        "(NULL, %s, %s, %s, %s, %s, %s, %s, FALSE)"
+        "(id, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden)"
+        " VALUES (DEFAULT, %s, %s, %s, %s, %s, %s, %s, FALSE) RETURNING id"
     )
     cursor.execute(
         sql_insert_content_query,
@@ -153,14 +176,14 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
             origin_id
         )
     )
-    content_id = cursor.lastrowid
+    content_id = cursor.fetchone()[0]
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
     for tag in tags:
         try:
             cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
         except mysql.connector.IntegrityError:
-            get_content_id = "SELECT ID FROM content WHERE file_path=%s"
-            get_tag_id = "SELECT ID FROM tag WHERE title=%s and category=%s"
+            get_content_id = "SELECT id FROM content WHERE file_path = %s"
+            get_tag_id = "SELECT id FROM tag WHERE title = %s and category = %s"
             cursor.execute(get_content_id, (str(file_path.relative_to(config.relative_to)),))
             content_id = cursor.fetchone()
             if content_id is None:
@@ -199,7 +222,8 @@ def verify_exists(auto_open_connection=True):
 
     for file in deleted_list:
         print(file)
-        sql_delete_tags = "DELETE FROM content_tags_list WHERE content_id = (SELECT ID FROM content WHERE file_path = %s)"
+        sql_delete_tags = \
+            "DELETE FROM content_tags_list WHERE content_id = (SELECT id FROM content WHERE file_path = %s)"
         cursor.execute(sql_delete_tags, (file,))
         sql_delete_file_query = "DELETE FROM content WHERE file_path = %s"
         cursor.execute(sql_delete_file_query, (file,))

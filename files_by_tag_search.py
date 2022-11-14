@@ -23,7 +23,7 @@ class ORDERING_BY(enum.Enum):
 ordering_constants = {
     ORDERING_BY.DATE_DECREASING: "addition_date DESC",
     ORDERING_BY.DATE_INCREASING: "addition_date",
-    ORDERING_BY.RANDOM: "RAND()"
+    ORDERING_BY.RANDOM: "RANDOM()"
 }
 
 
@@ -56,13 +56,14 @@ def _requests_fabric(
     tag_ids = list()
     tags_count = list()
 
+    sql_get_tag_ids = "SELECT * FROM get_tags_ids(%s)"
     for tag in tags:
-        cursor.callproc('get_tags_ids', (tag["title"],))
-        # implied that stored only one result
-        for result in cursor.stored_results():
-            response = result.fetchall()
-            tags_count.append(len(response))
-            tag_ids.extend([i[0] for i in response])
+        cursor.execute(sql_get_tag_ids, (tag["title"],))
+        recursive_tag_ids = cursor.fetchall()
+        tags_count.append(len(recursive_tag_ids))
+        tag_ids.extend([i[0] for i in recursive_tag_ids])
+
+    print(tag_ids)
 
     tags_set_lists = list()
     for i, val in enumerate(tags_count):
@@ -99,8 +100,8 @@ def get_media_by_tags(
         order_by: ORDERING_BY = ORDERING_BY.NONE,
         filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER,
     ):
-    common.open_connection_if_not_opened()
-    cursor = common.connection.cursor()
+    connection = common.make_connection()
+    cursor = connection.cursor()
     base_sql_code_block = "SELECT ID, file_path, content_type, title from content where "
     _requests_fabric(
         *tags,
@@ -119,19 +120,19 @@ def get_media_by_tags(
         file_path = cursor.fetchone()
     if order_by == ORDERING_BY.RANDOM:
         random.shuffle(list_files)
-    common.close_connection_if_not_closed()
+    connection.close()
     return list_files
 
 
 def count_files_with_every_tag(*tags: str, filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER):
     base_sql_code_block = "SELECT COUNT(*) from content where "
-    common.open_connection_if_not_opened()
-    cursor = common.connection.cursor()
+    connection = common.make_connection()
+    cursor = connection.cursor()
     get_image_id_by_tag_code_block = ("id in (SELECT content_id from content_tags_list where tag_id = "
                                       "(SELECT tag_id from tag_alias where title=%s))")
 
     _requests_fabric(*tags, base_sql_block=base_sql_code_block, cursor=cursor, filter_hidden=filter_hidden)
 
     result = cursor.fetchone()[0]
-    common.close_connection_if_not_closed()
+    connection.close()
     return result
