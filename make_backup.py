@@ -103,7 +103,7 @@ def write_srs(tar_dump, srs_file_path: pathlib.Path, content_id):
 
     files = []
     if audio_streams is not None:
-        for audio_stream in audio_streams["channels"]:
+        for audio_stream in audio_streams:
             for channel in audio_stream["channels"]:
                 for level in audio_stream["channels"][channel]:
                     files.append(audio_stream["channels"][channel][level])
@@ -183,7 +183,7 @@ def main():
     tar_dump = tarfile.TarFile("medialib-dump.tar", "w")
     tag_uniq_id: dict[TagUnique, int] = dict()
 
-    sql_get_content = "SELECT * FROM content order by RANDOM() LIMIT 50"
+    sql_get_content = "SELECT * FROM content order by RANDOM()"
     sql_get_tag_ids = "SELECT tag_id FROM content_tags_list WHERE content_id=%s"
     sql_get_tag = "SELECT * FROM tag WHERE ID=%s"
     sql_get_tag_aliases = "SELECT title FROM tag_alias WHERE tag_id=%s"
