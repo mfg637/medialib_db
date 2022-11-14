@@ -244,14 +244,18 @@ def main():
         content_document_io = io.StringIO()
         json.dump(content_document.json_serializable(), content_document_io)
         content_document_path = pathlib.PurePath("content-metadata/{}.json".format(content_id))
-        create_tar_file(tar_dump, content_document_io, content_document_path)
 
-        if content_document.file_path.suffix == ".srs":
-            write_srs(tar_dump, content_document.file_path, content_id)
-        elif content_document.file_path.suffix == ".mpd":
-            write_mpd(tar_dump, content_document.file_path, content_id)
+        try:
+            if content_document.file_path.suffix == ".srs":
+                write_srs(tar_dump, content_document.file_path, content_id)
+            elif content_document.file_path.suffix == ".mpd":
+                write_mpd(tar_dump, content_document.file_path, content_id)
+            else:
+                write_regular(tar_dump, content_document.file_path, content_id)
+        except FileNotFoundError as e:
+            print("Missing file \"{}\", content id = {}!".format(e.filename, content_id))
         else:
-            write_regular(tar_dump, content_document.file_path, content_id)
+            create_tar_file(tar_dump, content_document_io, content_document_path)
     tag_uniq_id_io = io.StringIO()
     tag_uniq_id_serialisable = []
     for elem in tag_uniq_id:
