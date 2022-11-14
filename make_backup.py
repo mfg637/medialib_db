@@ -3,10 +3,12 @@ import datetime
 import io
 import pathlib
 import json
-from typing import Any
+import re
+from typing import Any, Iterable
 import argparse
 import tarfile
 import crcmod
+import xml.dom.minidom
 
 import common
 import config
@@ -121,13 +123,67 @@ def write_srs(tar_dump, srs_file_path: pathlib.Path, content_id):
         tar_dump.add(name=str(abs_file_path), arcname=str(new_file_path))
 
 
+file_template_regex = re.compile("\$[\da-zA-Z\-%]+\$")
+
+
+def write_mpd(tar_dump, mpd_file_path, content_id):
+    global checksums
+
+    list_files = []
+
+    mpd_file = mpd_abs_path = config.relative_to.joinpath(mpd_file_path)
+
+    file_templates = set()
+    parent_dir = mpd_file.parent
+    mpd_document: xml.dom.minidom.Document = xml.dom.minidom.parse(str(mpd_file))
+    segment_templates: Iterable[xml.dom.minidom.Element] = mpd_document.getElementsByTagName("SegmentTemplate")
+    for template in segment_templates:
+        file_templates.add(file_template_regex.sub("*", template.getAttribute("initialization")))
+        file_templates.add(file_template_regex.sub("*", template.getAttribute("media")))
+    #logger.debug(file_templates.__repr__())
+
+    file_templates_iterable: tuple[str] = tuple(file_templates)
+    for file_template in file_templates_iterable:
+        for file in parent_dir.glob(file_template):
+            if file.is_file():
+                list_files.append(file)
+
+    file_hash = 0
+    with mpd_abs_path.open("br") as f:
+        file_hash = crc64(f.read())
+    mpd_new_file_path = pathlib.PurePath("content/{}/{}.mpd".format(content_id, content_id))
+    checksums.append((file_hash, mpd_new_file_path))
+    tar_dump.add(name=str(mpd_abs_path), arcname=str(mpd_new_file_path))
+
+    for file in list_files:
+        file_hash = 0
+        with file.open("br") as f:
+            file_hash = crc64(f.read())
+        new_file_path = pathlib.PurePath("content/{}/{}".format(content_id, file.name))
+        checksums.append((file_hash, new_file_path))
+        tar_dump.add(name=str(file), arcname=str(new_file_path))
+
+
+def write_regular(tar_dump, file_path: pathlib.Path, content_id):
+    global checksums
+
+    abs_path = config.relative_to.joinpath(file_path)
+
+    file_hash = 0
+    with abs_path.open("br") as f:
+        file_hash = crc64(f.read())
+    srs_new_file_path = pathlib.PurePath("content/{}{}".format(content_id, file_path.suffix))
+    checksums.append((file_hash, srs_new_file_path))
+    tar_dump.add(name=str(abs_path), arcname=str(srs_new_file_path))
+
+
 def main():
     global checksums
 
     tar_dump = tarfile.TarFile("medialib-dump.tar", "w")
     tag_uniq_id: dict[TagUnique, int] = dict()
 
-    sql_get_content = "SELECT * FROM content order by RANDOM() LIMIT 5"
+    sql_get_content = "SELECT * FROM content order by RANDOM() LIMIT 50"
     sql_get_tag_ids = "SELECT tag_id FROM content_tags_list WHERE content_id=%s"
     sql_get_tag = "SELECT * FROM tag WHERE ID=%s"
     sql_get_tag_aliases = "SELECT title FROM tag_alias WHERE tag_id=%s"
@@ -192,6 +248,10 @@ def main():
 
         if content_document.file_path.suffix == ".srs":
             write_srs(tar_dump, content_document.file_path, content_id)
+        elif content_document.file_path.suffix == ".mpd":
+            write_mpd(tar_dump, content_document.file_path, content_id)
+        else:
+            write_regular(tar_dump, content_document.file_path, content_id)
     tag_uniq_id_io = io.StringIO()
     tag_uniq_id_serialisable = []
     for elem in tag_uniq_id:
