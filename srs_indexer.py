@@ -3,8 +3,6 @@ import argparse
 import logging
 import pathlib
 
-import mysql.connector
-
 import medialib_db.common
 
 try:
@@ -85,21 +83,22 @@ def register(
         "(id, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) "
         "VALUES (DEFAULT, %s, %s, %s, %s, NOW(), %s, %s, FALSE) RETURNING id"
     )
-    try:
-        cursor.execute(
-            sql_insert_content_query,
-            (
-                str(file_path.relative_to(config.relative_to)),
-                medialib_db.common.postgres_string_format(title, common.CONTENT_TITLE_MAX_SIZE),
-                media_type,
-                description,
-                origin,
-                content_id
-            )
+    # TODO: uncomment try-except block, when same exception from postgresql connector occurs
+    #try:
+    cursor.execute(
+        sql_insert_content_query,
+        (
+            str(file_path.relative_to(config.relative_to)),
+            medialib_db.common.postgres_string_format(title, common.CONTENT_TITLE_MAX_SIZE),
+            media_type,
+            description,
+            origin,
+            content_id
         )
-    except mysql.connector.errors.IntegrityError:
+    )
+    #except :
         # triggers in same file path case (file exists)
-        return
+        #return
     content_id = cursor.fetchone()[0]
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
     for tag in _tags:
@@ -179,24 +178,25 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
     content_id = cursor.fetchone()[0]
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
     for tag in tags:
-        try:
-            cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
-        except mysql.connector.IntegrityError:
-            get_content_id = "SELECT id FROM content WHERE file_path = %s"
-            get_tag_id = "SELECT id FROM tag WHERE title = %s and category = %s"
-            cursor.execute(get_content_id, (str(file_path.relative_to(config.relative_to)),))
-            content_id = cursor.fetchone()
-            if content_id is None:
-                raise Exception("Database content insertion error")
-            else:
-                content_id = content_id[0]
-            cursor.execute(get_tag_id, tag[1:])
-            tag_id = cursor.fetchone()
-            if tag_id is None:
-                raise Exception("Database tag not exists error", tag[1:])
-            else:
-                tag_id = tag_id[0]
-            cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag_id))
+        # TODO: uncomment try-except block, when same exception from postgresql connector occurs
+        #try:
+        cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
+        # except mysql.connector.IntegrityError:
+        #     get_content_id = "SELECT id FROM content WHERE file_path = %s"
+        #     get_tag_id = "SELECT id FROM tag WHERE title = %s and category = %s"
+        #     cursor.execute(get_content_id, (str(file_path.relative_to(config.relative_to)),))
+        #     content_id = cursor.fetchone()
+        #     if content_id is None:
+        #         raise Exception("Database content insertion error")
+        #     else:
+        #         content_id = content_id[0]
+        #     cursor.execute(get_tag_id, tag[1:])
+        #     tag_id = cursor.fetchone()
+        #     if tag_id is None:
+        #         raise Exception("Database tag not exists error", tag[1:])
+        #     else:
+        #         tag_id = tag_id[0]
+        #     cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag_id))
 
     common.connection.commit()
     if auto_open_connection:
