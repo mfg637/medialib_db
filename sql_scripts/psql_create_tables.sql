@@ -90,3 +90,13 @@ CREATE TABLE thumbnail
     primary key (content_id, width, height, format),
 	foreign key (content_id) references content(ID)
 );
+
+create table representations (
+    content_id integer    not null
+        references content,
+    width           smallint   null,
+    height          smallint   null,
+    format          varchar(8) not null,
+    compatibility_level smallint null,
+    file_path       text       not null
+);
