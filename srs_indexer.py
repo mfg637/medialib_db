@@ -2,6 +2,7 @@ import json
 import argparse
 import logging
 import pathlib
+import dataclasses
 
 import psycopg2.errors
 
@@ -26,6 +27,13 @@ import datetime
 logger = logging.getLogger(__name__)
 
 
+@dataclasses.dataclass(frozen=True)
+class ContentRepresentationUnit:
+    file_path: pathlib.Path
+    compatibility_level: int | None
+    format: str
+
+
 MEDIA_TYPE_CODES = {
     0: "image",
     1: "audio",
@@ -38,8 +46,40 @@ def get_content_type(data):
     return MEDIA_TYPE_CODES[data['content']['media-type']]
 
 
+def srs_parse_representations(file_path: pathlib.Path) -> list[ContentRepresentationUnit]:
+    parent_dir = file_path.parent
+    results: list[ContentRepresentationUnit] = []
+    with file_path.open("r") as srs_file:
+        srs_data = json.load(srs_file)
+        if get_content_type(srs_data) == "image":
+            for level in srs_data["streams"]["image"]["levels"]:
+                repr_file_path = parent_dir.joinpath(srs_data["streams"]["image"]["levels"][level])
+                format = repr_file_path.suffix[1:].lower()
+                results.append(ContentRepresentationUnit(repr_file_path, int(level), format))
+    return results
+
+
+def srs_update_representations(content_id, file_path, cursor):
+    sql_remove_representations = (
+        "DELETE FROM representations WHERE content_id=%s"
+    )
+    sql_insert_representation = (
+        "INSERT INTO representations (content_id, format, compatibility_level, file_path) "
+        "VALUES (%s, %s, %s, %s)"
+    )
+    cursor.execute(sql_remove_representations, (content_id,))
+    representations = srs_parse_representations(file_path)
+    for representation in representations:
+        cursor.execute(sql_insert_representation, (
+            content_id,
+            representation.format,
+            representation.compatibility_level,
+            str(representation.file_path.relative_to(config.relative_to))
+        ))
+
+
 def register(
-        file_path, title, media_type, description, origin, content_id, tags, connection
+        file_path: pathlib.Path, title, media_type, description, origin, content_id, tags, connection
         ):
     cursor = connection.cursor()
 
@@ -105,6 +145,9 @@ def register(
     for tag in _tags:
         verify_tag(tag[0])
         cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
+
+    if file_path.suffix == ".srs":
+        srs_update_representations(content_id, file_path, cursor)
 
     connection.commit()
 

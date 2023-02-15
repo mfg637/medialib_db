@@ -198,8 +198,10 @@ def find_content_from_source(origin, origin_content_id, connection) -> tuple[int
     return result
 
 
-def update_file_path(content_id, file_path, connection):
+def update_file_path(content_id, file_path: pathlib.Path, connection):
     sql_template = "UPDATE content SET file_path = %s, addition_date=NOW() WHERE ID = %s"
     cursor = connection.cursor()
-    cursor.execute(sql_template, (file_path, content_id))
+    cursor.execute(sql_template, (str(file_path.relative_to(config.relative_to)), content_id))
+    if file_path.suffix == ".srs":
+        srs_indexer.srs_update_representations(content_id, file_path, cursor)
     connection.commit()
