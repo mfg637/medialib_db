@@ -205,3 +205,23 @@ def update_file_path(content_id, file_path: pathlib.Path, connection):
     if file_path.suffix == ".srs":
         srs_indexer.srs_update_representations(content_id, file_path, cursor)
     connection.commit()
+
+
+def get_representation_by_content_id(content_id, connection) -> list[srs_indexer.ContentRepresentationUnit]:
+    sql_get_representations = (
+        "SELECT format, compatibility_level, file_path FROM representations WHERE content_id=%s"
+        " ORDER BY compatibility_level"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_get_representations, (content_id,))
+    results = []
+    raw_representation = cursor.fetchone()
+    while raw_representation is not None:
+        results.append(srs_indexer.ContentRepresentationUnit(
+            config.relative_to.joinpath(raw_representation[2]),
+            raw_representation[1],
+            raw_representation[0]
+        ))
+        raw_representation = cursor.fetchone()
+    cursor.close()
+    return results
