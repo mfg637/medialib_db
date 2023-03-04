@@ -34,7 +34,7 @@ def get_content_metadata_by_content_id(content_id: int, connection):
     return result
 
 
-def get_thumbnail(path: pathlib.Path, width:int, height:int, _format: str, connection):
+def get_thumbnail_by_filepath(path: pathlib.Path, width:int, height:int, _format: str, connection):
     sql_template = ("SELECT file_path, format FROM thumbnail "
                     "WHERE content_id = (SELECT ID FROM content WHERE file_path=%s) "
                     "and width = %s and height = %s and format = %s")
@@ -47,20 +47,37 @@ def get_thumbnail(path: pathlib.Path, width:int, height:int, _format: str, conne
         return None, None
 
 
-def register_thumbnail(source_file: pathlib.Path, width: int, height: int, _format: str, connection):
-    sql_template_get_id = "SELECT id from content WHERE file_path=%s"
-    sql_template_register = "INSERT INTO thumbnail VALUES (%s, %s, %s, NOW(), %s, %s)"
+def get_thumbnail_by_content_id(content_id: int, width:int, height:int, _format: str, connection):
+    sql_template = ("SELECT file_path, format FROM thumbnail "
+                    "WHERE content_id = %s "
+                    "and width = %s and height = %s and format = %s")
     cursor = connection.cursor()
-    print(sql_template_get_id, (str(source_file),))
+    cursor.execute(sql_template, (content_id, width, height, _format))
+    result = cursor.fetchone()
+    if result is not None:
+        return result
+    else:
+        return None, None
+
+
+def register_thumbnail_by_file_path(source_file: pathlib.Path, width: int, height: int, _format: str, connection):
+    sql_template_get_id = "SELECT id from content WHERE file_path=%s"
+    cursor = connection.cursor()
     cursor.execute(sql_template_get_id, (str(source_file),))
     content_id = cursor.fetchone()
-    thumbnail_file_name = None
     if content_id is not None:
         content_id = content_id[0]
-        thumbnail_file_name = "{}-{}x{}.{}".format(content_id, width, height, _format.lower())
-        cursor.execute(sql_template_register, (content_id, width, height, _format, thumbnail_file_name))
+    cursor.close()
+    return content_id, register_thumbnail_by_content_id(content_id, width, height, _format, connection)
+
+
+def register_thumbnail_by_content_id(content_id: int, width: int, height: int, _format: str, connection):
+    sql_template_register = "INSERT INTO thumbnail VALUES (%s, %s, %s, NOW(), %s, %s)"
+    cursor = connection.cursor()
+    thumbnail_file_name = "{}-{}x{}.{}".format(content_id, width, height, _format.lower())
+    cursor.execute(sql_template_register, (content_id, width, height, _format, thumbnail_file_name))
     connection.commit()
-    return content_id, thumbnail_file_name
+    return thumbnail_file_name
 
 
 def drop_thumbnails(content_id, connection):
@@ -181,8 +198,30 @@ def find_content_from_source(origin, origin_content_id, connection) -> tuple[int
     return result
 
 
-def update_file_path(content_id, file_path, connection):
+def update_file_path(content_id, file_path: pathlib.Path, connection):
     sql_template = "UPDATE content SET file_path = %s, addition_date=NOW() WHERE ID = %s"
     cursor = connection.cursor()
-    cursor.execute(sql_template, (file_path, content_id))
+    cursor.execute(sql_template, (str(file_path.relative_to(config.relative_to)), content_id))
+    if file_path.suffix == ".srs":
+        srs_indexer.srs_update_representations(content_id, file_path, cursor)
     connection.commit()
+
+
+def get_representation_by_content_id(content_id, connection) -> list[srs_indexer.ContentRepresentationUnit]:
+    sql_get_representations = (
+        "SELECT format, compatibility_level, file_path FROM representations WHERE content_id=%s"
+        " ORDER BY compatibility_level"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_get_representations, (content_id,))
+    results = []
+    raw_representation = cursor.fetchone()
+    while raw_representation is not None:
+        results.append(srs_indexer.ContentRepresentationUnit(
+            config.relative_to.joinpath(raw_representation[2]),
+            raw_representation[1],
+            raw_representation[0]
+        ))
+        raw_representation = cursor.fetchone()
+    cursor.close()
+    return results
