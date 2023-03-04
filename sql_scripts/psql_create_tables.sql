@@ -100,3 +100,18 @@ create table representations (
     compatibility_level smallint null,
     file_path       text       not null
 );
+
+create table imagehash (
+    content_id integer
+        not null
+        unique
+        references content,
+    aspect_ratio float not null,
+    hue_hash smallint,
+    saturation_hash smallint,
+    value_hash bigint
+);
+
+create index imagehash_index on imagehash (
+    aspect_ratio, value_hash, hue_hash, saturation_hash
+);
