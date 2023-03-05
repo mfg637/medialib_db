@@ -106,7 +106,7 @@ create table imagehash (
         not null
         unique
         references content,
-    aspect_ratio float not null,
+    aspect_ratio real not null,
     hs_hash int not null,
     value_hash bigint not null
 );
