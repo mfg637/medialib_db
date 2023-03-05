@@ -198,13 +198,15 @@ def find_content_from_source(origin, origin_content_id, connection) -> tuple[int
     return result
 
 
-def update_file_path(content_id, file_path: pathlib.Path, connection):
+def update_file_path(content_id, file_path: pathlib.Path, image_hash, connection):
     sql_template = "UPDATE content SET file_path = %s, addition_date=NOW() WHERE ID = %s"
     cursor = connection.cursor()
     cursor.execute(sql_template, (str(file_path.relative_to(config.relative_to)), content_id))
     if file_path.suffix == ".srs":
         srs_indexer.srs_update_representations(content_id, file_path, cursor)
     connection.commit()
+    if image_hash is not None:
+        set_image_hash(content_id, image_hash, connection)
 
 
 def get_representation_by_content_id(content_id, connection) -> list[srs_indexer.ContentRepresentationUnit]:
@@ -225,3 +227,32 @@ def get_representation_by_content_id(content_id, connection) -> list[srs_indexer
         raw_representation = cursor.fetchone()
     cursor.close()
     return results
+
+
+def set_image_hash(content_id: int, image_hash: tuple[float, int, int], connection):
+    """
+    Write hash of image content to database.
+    :param image_hash: is a tuple of:
+        aspect ratio — 32bit float;
+        value_hash — 64bit integer;
+        hs_hash — 16bit hue and saturation hashes joint to 32bit integer;
+    """
+    sql_verify_hash_exists = "SELECT * FROM imagehash WHERE content_id=%s"
+    sql_insert_image_hash = (
+        "INSERT INTO imagehash (content_id, aspect_ratio, value_hash, hs_hash) "
+        "VALUES (%s, %s, %s, %s)"
+    )
+    sql_update_image_hash = (
+        "UPDATE imagehash SET aspect_ratio = %s, value_hash = %s, hs_hash = %s "
+        "WHERE content_id = %s"
+    )
+    aspect_ratio, value_hash, hs_hash = image_hash
+    cursor = connection.cursor()
+    cursor.execute(sql_verify_hash_exists, (content_id,))
+    exists_hash_data = cursor.fetchone()
+    if exists_hash_data is None:
+        cursor.execute(sql_insert_image_hash, (content_id, aspect_ratio, value_hash, hs_hash))
+    else:
+        cursor.execute(sql_update_image_hash, (aspect_ratio, value_hash, hs_hash, content_id))
+    connection.commit()
+    cursor.close()

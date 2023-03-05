@@ -80,7 +80,11 @@ def srs_update_representations(content_id, file_path, cursor):
 
 def register(
         file_path: pathlib.Path, title, media_type, description, origin, content_id, tags, connection
-        ):
+        ) -> int:
+    """
+    Register content in medialib database
+    :return: content ID
+    """
     cursor = connection.cursor()
 
     _tags = list()
@@ -150,6 +154,7 @@ def register(
         srs_update_representations(content_id, file_path, cursor)
 
     connection.commit()
+    return content_id
 
 
 def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
