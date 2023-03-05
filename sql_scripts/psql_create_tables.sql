@@ -107,11 +107,10 @@ create table imagehash (
         unique
         references content,
     aspect_ratio float not null,
-    hue_hash smallint,
-    saturation_hash smallint,
-    value_hash bigint
+    hs_hash int not null,
+    value_hash bigint not null
 );
 
 create index imagehash_index on imagehash (
-    aspect_ratio, value_hash, hue_hash, saturation_hash
+    aspect_ratio, value_hash, hs_hash
 );
