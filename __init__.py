@@ -256,3 +256,12 @@ def set_image_hash(content_id: int, image_hash: tuple[float, int, int], connecti
         cursor.execute(sql_update_image_hash, (aspect_ratio, value_hash, hs_hash, content_id))
     connection.commit()
     cursor.close()
+
+
+def get_image_hash(content_id, connection):
+    sql_get_hash = "SELECT * FROM imagehash WHERE content_id=%s"
+    cursor = connection.cursor()
+    cursor.execute(sql_get_hash, (content_id,))
+    exists_hash_data = cursor.fetchone()
+    cursor.close()
+    return exists_hash_data
