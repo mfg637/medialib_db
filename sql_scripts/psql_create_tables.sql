@@ -108,9 +108,12 @@ create table imagehash (
         references content,
     aspect_ratio real not null,
     hs_hash int not null,
-    value_hash bigint not null
+    value_hash bigint not null,
+    alternate_version boolean not null default false
 );
 
 create index imagehash_index on imagehash (
     aspect_ratio, value_hash, hs_hash
 );
+
+create index hsv_value_hash_index on imagehash (value_hash);
