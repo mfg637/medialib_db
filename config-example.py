@@ -7,3 +7,4 @@ db_user = ""
 db_password = ""
 
 relative_to = pathlib.Path("/")
+thumbnails_storage = pathlib.Path("/")
