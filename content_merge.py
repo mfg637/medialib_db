@@ -89,7 +89,8 @@ if __name__ == '__main__':
         print("These files will be removed:")
         representation_file_name = cursor.fetchone()
         while representation_file_name is not None:
-            representation_file = config.relative_to.joinpath(representation_file_name)
+            representation_file = config.relative_to.joinpath(representation_file_name[0])
+            print(representation_file)
             representations_list.append(representation_file)
             representation_file_name = cursor.fetchone()
         if len(representations_list) == 0:
@@ -134,7 +135,7 @@ if __name__ == '__main__':
         cursor.execute(sql_remove_imagehash, (content_to_merge_id,))
         if len(representations_list) > 0:
             sql_remove_reps = (
-                "delete from represemtations where content_id = %s"
+                "delete from representations where content_id = %s"
             )
             print("Removing representations from database…")
             cursor.execute(sql_remove_reps, (content_to_merge_id,))
