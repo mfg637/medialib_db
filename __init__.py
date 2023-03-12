@@ -291,3 +291,17 @@ def get_album_content(album_id, connection):
     result = cursor.fetchall()
     cursor.close()
     return result
+
+
+def get_content_albums(content_id, connection):
+    sql_get_albums_by_content_id = (
+        "select ID, (select title from tag where tag.id = album.set_tag_id), "
+        "(select title from tag where tag.id = album.album_artist_tag_id) "
+        "from album where id in "
+        "(select album_id from album_order where content_id = %s)"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_get_albums_by_content_id, (content_id,))
+    results = cursor.fetchall()
+    cursor.close()
+    return results
