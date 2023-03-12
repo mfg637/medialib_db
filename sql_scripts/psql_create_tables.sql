@@ -115,3 +115,37 @@ create table imagehash (
 create index imagehash_index on imagehash (
     value_hash, hs_hash
 );
+
+-- album is an ordered set of media content
+-- this table represent general information about an album
+-- ID field needed to prevent repeating set id and album artist id in each
+--      content to album relation
+create table album (
+    ID                  serial primary key,
+    set_tag_id          integer not null references tag,
+    album_artist_tag_id integer not null references tag,
+    constraint uniq_album_id unique (set_tag_id, album_artist_tag_id)
+);
+
+-- tag types validation trigger function
+create function new_album() RETURNS trigger AS $new_album$
+    begin
+        if (select tag.category from tag where ID = NEW.set_tag_id) != 'set' then
+            raise exception 'tag_id_set points to non set tag type';
+        end if;
+        if (select tag.category from tag where ID = NEW.album_artist_tag_id) != 'artist' then
+            raise exception 'tag_id_artist points to non artist tag type';
+        end if;
+        return NEW;
+    end;
+$new_album$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER new_album BEFORE INSERT OR UPDATE ON album
+    FOR EACH ROW EXECUTE FUNCTION new_album();
+
+create table album_order (
+    album_id integer not null references album,
+    content_id integer not null references content,
+    "order" integer not null
+);
