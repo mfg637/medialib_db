@@ -113,7 +113,5 @@ create table imagehash (
 );
 
 create index imagehash_index on imagehash (
-    aspect_ratio, value_hash, hs_hash
+    value_hash, hs_hash
 );
-
-create index hsv_value_hash_index on imagehash (value_hash);
