@@ -265,3 +265,29 @@ def get_image_hash(content_id, connection):
     exists_hash_data = cursor.fetchone()
     cursor.close()
     return exists_hash_data
+
+
+def get_album_title(album_id, connection):
+    sql_get_album_title = (
+        "select (select title from tag where tag.id = album.set_tag_id), "
+        "(select title from tag where tag.id = album.album_artist_tag_id) "
+        "from album where ID = %s"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_get_album_title, (album_id,))
+    result = cursor.fetchone()
+    cursor.close()
+    return result
+
+
+def get_album_content(album_id, connection):
+    sql_get_content_by_album_id = (
+        "select content.ID, file_path, content_type, title "
+        "from album_order join content on album_order.content_id = content.ID "
+        "where album_id = %s order by album_order.\"order\";"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_get_content_by_album_id, (album_id,))
+    result = cursor.fetchall()
+    cursor.close()
+    return result
