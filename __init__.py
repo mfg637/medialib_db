@@ -1,3 +1,4 @@
+import dataclasses
 import pathlib
 
 from . import files_by_tag_search
@@ -305,3 +306,61 @@ def get_content_albums(content_id, connection):
     results = cursor.fetchall()
     cursor.close()
     return results
+
+
+@dataclasses.dataclass
+class DuplicatedContentItem:
+    content_id: int
+    file_path: str
+    content_type: str
+    title: str
+    is_alternate_version: bool
+    content_metadata = None
+
+
+@dataclasses.dataclass
+class DuplicateImageHashItem:
+    value_hash: int
+    hs_hash: int
+    duplicated_images: list[DuplicatedContentItem]
+
+
+def find_duplicates(connection, show_alternates=False):
+    sql_find_duplicates_and_hide_alternates = (
+        "select value_hash, hs_hash from "
+        "(select count(*) as c1, value_hash, hs_hash, alternate_version from imagehash "
+        "group by value_hash, hs_hash, alternate_version) as u1 "
+        "where u1.c1 > 1 and u1.alternate_version = false;"
+    )
+    sql_find_duplicates_and_alternates = (
+        "select value_hash, hs_hash from "
+        "(select count(*) as c1, value_hash, hs_hash from imagehash "
+        "group by value_hash, hs_hash) as u1 "
+        "where u1.c1 > 1;"
+    )
+    sql_find_duplicates_by_hash = (
+        "select content.ID, file_path, content_type, title, alternate_version "
+        "from content join imagehash on content.ID = imagehash.content_id "
+        "where value_hash = %s and hs_hash = %s;"
+    )
+    results: list[DuplicateImageHashItem] = []
+    cursor = connection.cursor()
+    if show_alternates:
+        cursor.execute(sql_find_duplicates_and_alternates, tuple())
+    else:
+        cursor.execute(sql_find_duplicates_and_hide_alternates, tuple())
+    image_hash_list = cursor.fetchall()
+    for image_hash in image_hash_list:
+        hash_item = DuplicateImageHashItem(image_hash[0], image_hash[1], [])
+        cursor.execute(sql_find_duplicates_by_hash, (hash_item.value_hash, hash_item.hs_hash))
+        image_data = cursor.fetchone()
+        while image_data is not None:
+            image_item = DuplicatedContentItem(
+                *image_data
+            )
+            hash_item.duplicated_images.append(image_item)
+            image_data = cursor.fetchone()
+        results.append(hash_item)
+    cursor.close()
+    return results
+
