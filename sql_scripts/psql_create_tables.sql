@@ -116,6 +116,22 @@ create index imagehash_index on imagehash (
     value_hash, hs_hash
 );
 
+create table imagehash (
+    content_id integer
+        not null
+        unique
+        references content,
+    aspect_ratio real not null,
+    hue_hash bigint not null,
+    saturation_hash bigint not null,
+    value_hash bytea not null,
+    alternate_version boolean not null default false
+);
+
+create index imagehash_index on imagehash (
+    value_hash, hue_hash, saturation_hash
+);
+
 -- album is an ordered set of media content
 -- this table represent general information about an album
 -- ID field needed to prevent repeating set id and album artist id in each
