@@ -230,7 +230,7 @@ def get_representation_by_content_id(content_id, connection) -> list[srs_indexer
     return results
 
 
-def set_image_hash(content_id: int, image_hash: tuple[float, int, int], connection):
+def set_image_hash(content_id: int, image_hash: tuple[float, bytes, int, int], connection):
     """
     Write hash of image content to database.
     :param image_hash: is a tuple of:
@@ -240,21 +240,21 @@ def set_image_hash(content_id: int, image_hash: tuple[float, int, int], connecti
     """
     sql_verify_hash_exists = "SELECT * FROM imagehash WHERE content_id=%s"
     sql_insert_image_hash = (
-        "INSERT INTO imagehash (content_id, aspect_ratio, value_hash, hs_hash) "
-        "VALUES (%s, %s, %s, %s)"
+        "INSERT INTO imagehash (content_id, aspect_ratio, value_hash, hue_hash, saturation_hash) "
+        "VALUES (%s, %s, decode(%s, 'hex'), %s, %s)"
     )
     sql_update_image_hash = (
-        "UPDATE imagehash SET aspect_ratio = %s, value_hash = %s, hs_hash = %s "
+        "UPDATE imagehash SET aspect_ratio = %s, value_hash = decode(%s, 'hex'), hue_hash = %s, saturation_hash = %s "
         "WHERE content_id = %s"
     )
-    aspect_ratio, value_hash, hs_hash = image_hash
+    aspect_ratio, value_hash, hue_hash, saturation_hash = image_hash
     cursor = connection.cursor()
     cursor.execute(sql_verify_hash_exists, (content_id,))
     exists_hash_data = cursor.fetchone()
     if exists_hash_data is None:
-        cursor.execute(sql_insert_image_hash, (content_id, aspect_ratio, value_hash, hs_hash))
+        cursor.execute(sql_insert_image_hash, (content_id, aspect_ratio, value_hash.hex(), hue_hash, saturation_hash))
     else:
-        cursor.execute(sql_update_image_hash, (aspect_ratio, value_hash, hs_hash, content_id))
+        cursor.execute(sql_update_image_hash, (aspect_ratio, value_hash.hex(), hue_hash, saturation_hash, content_id))
     connection.commit()
     cursor.close()
 
@@ -320,28 +320,29 @@ class DuplicatedContentItem:
 
 @dataclasses.dataclass
 class DuplicateImageHashItem:
-    value_hash: int
-    hs_hash: int
+    value_hash: bytes
+    hue_hash: int
+    saturation_hash: int
     duplicated_images: list[DuplicatedContentItem]
 
 
 def find_duplicates(connection, show_alternates=False):
     sql_find_duplicates_and_hide_alternates = (
-        "select value_hash, hs_hash from "
-        "(select count(*) as c1, value_hash, hs_hash, alternate_version from imagehash "
-        "group by value_hash, hs_hash, alternate_version) as u1 "
+        "select encode(value_hash, 'hex'), hue_hash, saturation_hash from "
+        "(select count(*) as c1, value_hash, hue_hash, saturation_hash, alternate_version from imagehash "
+        "group by value_hash, hue_hash, saturation_hash, alternate_version) as u1 "
         "where u1.c1 > 1 and u1.alternate_version = false;"
     )
     sql_find_duplicates_and_alternates = (
-        "select value_hash, hs_hash from "
-        "(select count(*) as c1, value_hash, hs_hash from imagehash "
-        "group by value_hash, hs_hash) as u1 "
+        "select encode(value_hash, 'hex'), hue_hash, saturation_hash from "
+        "(select count(*) as c1, value_hash, hue_hash, saturation_hash from imagehash "
+        "group by value_hash, hue_hash, saturation_hash) as u1 "
         "where u1.c1 > 1;"
     )
     sql_find_duplicates_by_hash = (
         "select content.ID, file_path, content_type, title, alternate_version "
         "from content join imagehash on content.ID = imagehash.content_id "
-        "where value_hash = %s and hs_hash = %s;"
+        "where value_hash = decode(%s, 'hex') and hue_hash = %s and saturation_hash = %s;"
     )
     results: list[DuplicateImageHashItem] = []
     cursor = connection.cursor()
@@ -351,8 +352,10 @@ def find_duplicates(connection, show_alternates=False):
         cursor.execute(sql_find_duplicates_and_hide_alternates, tuple())
     image_hash_list = cursor.fetchall()
     for image_hash in image_hash_list:
-        hash_item = DuplicateImageHashItem(image_hash[0], image_hash[1], [])
-        cursor.execute(sql_find_duplicates_by_hash, (hash_item.value_hash, hash_item.hs_hash))
+        hash_item = DuplicateImageHashItem(image_hash[0], image_hash[1], image_hash[2], [])
+        cursor.execute(sql_find_duplicates_by_hash, (
+            hash_item.value_hash, hash_item.hue_hash, hash_item.saturation_hash
+        ))
         image_data = cursor.fetchone()
         while image_data is not None:
             image_item = DuplicatedContentItem(
