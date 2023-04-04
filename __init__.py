@@ -7,6 +7,7 @@ from . import testing
 from . import tags_indexer
 from . import srs_indexer
 from . import config
+from . import openclip_classification
 
 
 def get_tag_name_by_alias(alias):
