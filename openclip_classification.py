@@ -20,25 +20,32 @@ def make_clip_classification(
         image: PIL.Image.Image, shared_state_list_proxy, results_pipe: multiprocessing.connection.Connection,
         tag_len_min=4,
         tag_len_max=8,
-        max_tags_per_iteration=25,
+        max_tags_per_iteration=256,
         max_tags_count=100,
-        max_tag_probability=0.5
+        min_tag_probability=0.25
 ):
     connection = common.make_connection()
     cursor = connection.cursor()
 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     sql_get_tag_names = (
-        "SELECT id, title FROM tag where length(title) <= %s and length(title) >= %s "
+        "SELECT id, title, category FROM tag where length(title) <= %s and length(title) >= %s "
         "and category != 'artist' and category != 'set';"
     )
     cursor.execute(sql_get_tag_names, (tag_len_max, tag_len_min))
 
-    model, _, preprocess = open_clip.create_model_and_transforms('ViT-B-32-quickgelu', pretrained='laion400m_e32')
+    model, _, preprocess = open_clip.create_model_and_transforms(
+        'ViT-B-32-quickgelu', pretrained='laion400m_e32', device=device
+    )
+    if torch.cuda.is_available():
+        model.cuda()
     tokenizer = open_clip.get_tokenizer('ViT-B-32-quickgelu')
 
-    _image = preprocess(image).unsqueeze(0)
+    _image = preprocess(image).unsqueeze(0).to(device)
     labels = []
     ids = []
+    categories = []
     image_features = model.encode_image(_image)
     image_features /= image_features.norm(dim=-1, keepdim=True)
 
@@ -46,6 +53,7 @@ def make_clip_classification(
     while tag_name is not None:
         labels.append(tag_name[1])
         ids.append(tag_name[0])
+        categories.append(tag_name[2])
         tag_name = cursor.fetchone()
     cursor.close()
     connection.close()
@@ -58,29 +66,30 @@ def make_clip_classification(
         shared_state_list_proxy.done = current_iteration
         _labels = labels[current_iteration: current_iteration + max_tags_per_iteration]
         _ids = ids[current_iteration: current_iteration + max_tags_per_iteration]
+        _categories = categories[current_iteration: current_iteration + max_tags_per_iteration]
 
-        text = tokenizer(_labels)
+        text = tokenizer(_labels).to(device)
 
         with torch.no_grad(), torch.cuda.amp.autocast():
             text_features = model.encode_text(text)
             text_features /= text_features.norm(dim=-1, keepdim=True)
             text_probs = (100.0 * image_features @ text_features.T).softmax(dim=-1)
 
-        results = zip(_ids, _labels, text_probs.tolist()[0])
+        results = zip(_ids, _labels, _categories, text_probs.tolist()[0])
 
         results_list.extend(results)
 
         current_iteration += max_tags_per_iteration
 
     def sort_results(e):
-        return e[2]
+        return e[3]
 
     results_list.sort(key=sort_results, reverse=True)
 
     if max_tags_count is not None:
         filtered_results_list = []
         for i in range(max_tags_count):
-            if results_list[i][2] >= max_tag_probability:
+            if results_list[i][3] >= min_tag_probability:
                 filtered_results_list.append(results_list[i])
             else:
                 break
@@ -119,4 +128,4 @@ if __name__ == '__main__':
 
     results = get_clip_classified_result(img)
     for result in results:
-        print("{}: {}".format(result[1], result[2]))
+        print("{} ({}): {}".format(result[1], result[2], result[3]))
