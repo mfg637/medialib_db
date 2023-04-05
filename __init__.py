@@ -159,6 +159,14 @@ def add_tags_for_content(content_id, tags: list[tuple[str, str, str]], connectio
     connection.commit()
 
 
+def add_tags_for_content_by_tag_ids(content_id, tag_ids: list[int], connection):
+    cursor = connection.cursor()
+    for tag_id in tag_ids:
+        cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag_id))
+
+    connection.commit()
+
+
 def connect_tag_by_id(content_id, tag_id, connection):
     cursor = connection.cursor()
     sql_validate_tag_connected = "SELECT * FROM content_tags_list WHERE content_id = %s and tag_id = %s"

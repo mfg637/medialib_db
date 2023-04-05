@@ -20,9 +20,9 @@ def make_clip_classification(
         image: PIL.Image.Image, shared_state_list_proxy, results_pipe: multiprocessing.connection.Connection,
         tag_len_min=4,
         tag_len_max=8,
-        max_tags_per_iteration=256,
-        max_tags_count=100,
-        min_tag_probability=0.25
+        max_tags_per_iteration=128,
+        max_tags_count=200,
+        min_tag_probability=0.125
 ):
     connection = common.make_connection()
     cursor = connection.cursor()
