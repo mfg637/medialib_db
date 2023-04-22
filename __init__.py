@@ -20,6 +20,16 @@ def get_tag_name_by_alias(alias):
     return result
 
 
+def get_tag_name_by_id(id):
+    connection = common.make_connection()
+    cursor = connection.cursor()
+    sql_template = "SELECT title FROM tag WHERE id = %s"
+    cursor.execute(sql_template, (id,))
+    result = cursor.fetchone()[0]
+    connection.close()
+    return result
+
+
 def get_content_metadata_by_file_path(path: pathlib.Path, connection):
     cursor = connection.cursor()
     sql_template = "SELECT * FROM content WHERE file_path=%s"
@@ -180,16 +190,16 @@ def connect_tag_by_id(content_id, tag_id, connection):
 def get_tags_by_content_id(content_id, auto_open_connection=True):
     connection = common.make_connection()
     cursor = connection.cursor()
-    sql_template = ("SELECT title, category FROM tag where id in "
+    sql_template = ("SELECT id, title, category FROM tag where id in "
                     "(SELECT tag_id from content_tags_list where content_id = %s)")
     cursor.execute(sql_template, (content_id,))
     result = dict()
     tag = cursor.fetchone()
     while tag is not None:
-        if tag[1] not in result:
-            result[tag[1]] = [tag[0]]
+        if tag[2] not in result:
+            result[tag[2]] = [(tag[0], tag[1])]
         else:
-            result[tag[1]].append(tag[0])
+            result[tag[2]].append((tag[0], tag[1]))
         tag = cursor.fetchone()
     connection.close()
     return result
@@ -292,7 +302,7 @@ def get_album_title(album_id, connection):
 
 def get_album_content(album_id, connection):
     sql_get_content_by_album_id = (
-        "select content.ID, file_path, content_type, title "
+        "select content.ID, file_path, content_type, title, description, origin, origin_content_id, \"order\" "
         "from album_order join content on album_order.content_id = content.ID "
         "where album_id = %s order by album_order.\"order\";"
     )
@@ -302,6 +312,69 @@ def get_album_content(album_id, connection):
     cursor.close()
     return result
 
+
+def get_album_related_content(set_tag_id, artist_tag_id, connection):
+
+    sql_get_content_by_album_id = (
+        "select content.id, file_path, content_type, title, description, origin, origin_content_id, album_order.\"order\" "
+        "from content left outer join album_order "
+        "on content.id = album_order.content_id "
+        "where content.id in "
+        "(SELECT content_id FROM content_tags_list WHERE tag_id = %s) "
+        "and content.id in "
+        "(SELECT content_id FROM content_tags_list WHERE tag_id = %s)"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_get_content_by_album_id, (set_tag_id, artist_tag_id))
+    result = cursor.fetchall()
+    cursor.close()
+    return result
+
+def get_album_id(set_tag_id, artist_tag_id, connection):
+    sql_get_album_id = "select id from album where set_tag_id = %s and album_artist_tag_id = %s"
+    cursor = connection.cursor()
+    cursor.execute(sql_get_album_id, (set_tag_id, artist_tag_id))
+    result = cursor.fetchone()
+    if result is not None:
+        result = result[0]
+    cursor.close()
+    return result
+
+def make_album(set_tag_id, artist_tag_id, connection):
+    sql_register_album = (
+        "INSERT INTO album VALUES (DEFAULT, %s, %s) RETURNING id"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_register_album, (set_tag_id, artist_tag_id))
+    result = cursor.fetchone()[0]
+    cursor.close()
+    return result
+
+def set_album_order(album_id, content_id, order, connection):
+    sql_verify_content_registered = (
+        "select * from album_order where album_id = %s and content_id = %s"
+    )
+    sql_insert_content_order = (
+        "INSERT INTO album_order VALUES (%s, %s, %s)"
+    )
+    sql_update_order = (
+        "UPDATE album_order SET \"order\" = %s WHERE album_id = %s and content_id = %s"
+    )
+    sql_delete_content_from_album = (
+        "DELETE FROM album_order WHERE album_id = %s and content_id = %s"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_verify_content_registered, (album_id, content_id))
+    content_info = cursor.fetchone()
+    if content_info is None:
+        if order is not None:
+            cursor.execute(sql_insert_content_order, (album_id, content_id, order))
+    else:
+        if order is not None:
+            if content_info[2] != order:
+                cursor.execute(sql_update_order, (order, album_id, content_id))
+        else:
+            cursor.execute(sql_delete_content_from_album, (album_id, content_id))
 
 def get_content_albums(content_id, connection):
     sql_get_albums_by_content_id = (
