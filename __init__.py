@@ -389,6 +389,22 @@ def get_content_albums(content_id, connection):
     cursor.close()
     return results
 
+def get_album_covers(connection):
+    sql_get_album_covers = (
+        "select content.id, file_path, content_type, "
+        "CONCAT((select title from tag where tag.id = album.set_tag_id), ' by ', "
+        "(select title from tag where tag.id = album.album_artist_tag_id)), "
+        "album.id "
+        "from album, lateral "
+        "(select * from album_order where album.id = album_order.album_id order by album_order.\"order\" limit 1) ao "
+        "join content on content.id = ao.content_id"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_get_album_covers, tuple())
+    results = cursor.fetchall()
+    cursor.close()
+    return results
+
 
 @dataclasses.dataclass
 class DuplicatedContentItem:
