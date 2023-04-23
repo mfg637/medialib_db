@@ -20,6 +20,34 @@ class TagUnique:
     category: str
 
 
+@dataclasses.dataclass(frozen=True)
+class ImageHash:
+    aspect_ratio: float
+    value_hash: str
+    hue_hash: int
+    saturation_hash: int
+    alternate_version: bool
+
+
+@dataclasses.dataclass(frozen=True)
+class ContentRepresentationElement:
+    format: str
+    compatibility_level: int
+    file_path: pathlib.Path
+
+    def json_serializable(self) -> dict[str, Any]:
+        serializable = dataclasses.asdict(self)
+        serializable["file_path"] = str(self.file_path)
+        return serializable
+
+
+@dataclasses.dataclass(frozen=True)
+class AlbumOrder:
+    set_tag: TagUnique
+    artist_tag: TagUnique
+    order: int
+
+
 @dataclasses.dataclass
 class ContentDocument:
     content_id: int
@@ -32,12 +60,19 @@ class ContentDocument:
     origin_content_id: str
     is_hidden: bool
     tags: set[TagUnique]
+    imagehash: ImageHash | None = None
+    representations: list[ContentRepresentationElement] | None = None
+    albums: list[AlbumOrder] | None = None
 
     def json_serializable(self) -> dict[str, Any]:
         serializable = dataclasses.asdict(self)
         serializable["file_path"] = str(self.file_path)
         serializable["addition_date"] = self.addition_date.isoformat()
         serializable["tags"] = [dataclasses.asdict(tag) for tag in self.tags]
+        if self.representations is not None:
+            serializable["representations"] = [
+                repr.json_serializable() for repr in self.representations
+            ]
         return serializable
 
 
@@ -187,6 +222,18 @@ def main():
     sql_get_tag_ids = "SELECT tag_id FROM content_tags_list WHERE content_id=%s"
     sql_get_tag = "SELECT * FROM tag WHERE ID=%s"
     sql_get_tag_aliases = "SELECT title FROM tag_alias WHERE tag_id=%s"
+    sql_get_image_hash = (
+        "SELECT aspect_ratio, ENCODE(value_hash, 'hex'), hue_hash, saturation_hash, alternate_version "
+        "FROM imagehash WHERE content_id = %s"
+    )
+    sql_get_representations = (
+        "SELECT * FROM representations WHERE content_id = %s"
+    )
+    sql_get_album = (
+        "SELECT album.set_tag_id, album.album_artist_tag_id, album_order.order "
+        "FROM album_order JOIN album ON album_order.album_id = album.id "
+        "WHERE album_order.content_id = %s"
+    )
 
     connection = common.make_connection()
     cursor = connection.cursor()
@@ -228,6 +275,40 @@ def main():
         tag_ids = cursor.fetchall()
         for tag_id_wrapped in tag_ids:
             tags.add(tags_processing(tag_id_wrapped[0], cursor))
+        image_hash = None
+        cursor.execute(sql_get_image_hash, (content_id,))
+        image_hash_raw = cursor.fetchall()
+        if image_hash_raw is not None and len(image_hash_raw):
+            image_hash = ImageHash(
+                image_hash_raw[0][0],
+                image_hash_raw[0][1],
+                image_hash_raw[0][2],
+                image_hash_raw[0][3],
+                image_hash_raw[0][4]
+            )
+        representations = None
+        cursor.execute(sql_get_representations, (content_id,))
+        raw_representations = cursor.fetchall()
+        if raw_representations is not None and len(raw_representations):
+            representations = list()
+            for representations_raw_item in raw_representations:
+                representations.append(ContentRepresentationElement(
+                    representations_raw_item[1],
+                    representations_raw_item[2],
+                    pathlib.Path(representations_raw_item[3])
+                ))
+        albums = None
+        cursor.execute(sql_get_album, (content_id,))
+        raw_albums = cursor.fetchall()
+        if raw_albums is not None and len(raw_albums):
+            albums = list()
+            for raw_album_item in raw_albums:
+                albums.append(AlbumOrder(
+                    tags_processing(raw_album_item[0], cursor),
+                    tags_processing(raw_album_item[1], cursor),
+                    raw_album_item[2]
+                ))
+
         content_document = ContentDocument(
             content_id=content_id,
             file_path=pathlib.Path(content[1]),
@@ -238,7 +319,10 @@ def main():
             origin=content[6],
             origin_content_id=content[7],
             is_hidden=content[8],
-            tags=tags
+            tags=tags,
+            imagehash=image_hash,
+            representations=representations,
+            albums=albums
         )
 
         content_document_io = io.StringIO()
