@@ -62,21 +62,17 @@ def _requests_fabric(
     for tags_group in tags_groups:
         raw_tag_ids = []
         for tag in tags_group["tags"]:
-            print(tag, type(tag))
             if type(tag) is str:
                 cursor.execute(sql_get_tag_ids, (tag,))
             elif type(tag) is int:
                 cursor.execute(sql_get_parent_ids, (tag,))
             data = cursor.fetchall()
-            print("fetch data", data)
             raw_tag_ids.extend(data)
         tags_count.append(len(raw_tag_ids))
         _tag_ids = set()
         for raw_id in raw_tag_ids:
             _tag_ids.add(raw_id[0])
         tag_ids.extend(_tag_ids)
-
-    print(tag_ids)
 
     tags_set_lists = list()
     for i, val in enumerate(tags_count):
