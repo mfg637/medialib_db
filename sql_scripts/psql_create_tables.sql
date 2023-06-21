@@ -79,6 +79,25 @@ language sql as $$
     select ID from get_tags_ids_r;
 $$;
 
+CREATE FUNCTION get_parent_tag_ids (IN tag_id bigint)
+RETURNS TABLE (id bigint)
+language sql as $$
+    -- taken from https://stackoverflow.com/a/33737203
+    with recursive get_tags_ids_r (id, parent_id) as (
+        select      ID,
+                    parent
+        from        tag
+        where       ID = tag_id
+        union all
+        select      t.ID,
+                    t.parent
+        from        tag t
+        inner join  get_tags_ids_r as t_rec
+                on  t.parent = t_rec.ID
+    )
+    select ID from get_tags_ids_r;
+$$;
+
 CREATE TABLE thumbnail
 (
 	content_id      int4         not null,

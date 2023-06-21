@@ -1,6 +1,7 @@
 import pathlib
 import enum
 import random
+import typing
 
 try:
     from . import config
@@ -41,7 +42,7 @@ hidden_filtering_constants = {
 
 
 def _requests_fabric(
-        *tags_groups: dict,
+        *tags_groups: dict[str, typing.Any],
         limit: int = None,
         offset: int = None,
         order_by: ORDERING_BY = ORDERING_BY.NONE,
@@ -57,11 +58,18 @@ def _requests_fabric(
     tags_count = list()
 
     sql_get_tag_ids = "SELECT * FROM get_tags_ids(%s)"
+    sql_get_parent_ids = "SELECT * FROM get_parent_tag_ids(%s)"
     for tags_group in tags_groups:
         raw_tag_ids = []
         for tag in tags_group["tags"]:
-            cursor.execute(sql_get_tag_ids, (tag,))
-            raw_tag_ids.extend(cursor.fetchall())
+            print(tag, type(tag))
+            if type(tag) is str:
+                cursor.execute(sql_get_tag_ids, (tag,))
+            elif type(tag) is int:
+                cursor.execute(sql_get_parent_ids, (tag,))
+            data = cursor.fetchall()
+            print("fetch data", data)
+            raw_tag_ids.extend(data)
         tags_count.append(len(raw_tag_ids))
         _tag_ids = set()
         for raw_id in raw_tag_ids:
@@ -99,7 +107,7 @@ def _requests_fabric(
 
 
 def get_media_by_tags(
-        *tags: str,
+        *tags: dict[str, typing.Any],
         limit: int = None,
         offset: int = None,
         order_by: ORDERING_BY = ORDERING_BY.NONE,
@@ -129,7 +137,7 @@ def get_media_by_tags(
     return list_files
 
 
-def count_files_with_every_tag(*tags: str, filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER):
+def count_files_with_every_tag(*tags: dict[str, typing.Any], filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER):
     base_sql_code_block = "SELECT COUNT(*) from content where "
     connection = common.make_connection()
     cursor = connection.cursor()
