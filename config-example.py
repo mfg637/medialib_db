@@ -6,5 +6,6 @@ db_name = ""
 db_user = ""
 db_password = ""
 
-relative_to = pathlib.Path("/")
+relative_to = pathlib.Path("/mnt")
 thumbnails_storage = pathlib.Path("/")
+enable_openclip = False

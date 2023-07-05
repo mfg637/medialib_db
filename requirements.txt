@@ -3,4 +3,5 @@ psycopg2
 Pillow
 
 crcmod
-torch==2.0.0
+# optional dependency
+#torch==2.0.0
