@@ -184,3 +184,33 @@ create table album_order (
     content_id integer not null references content,
     "order" integer not null
 );
+
+CREATE TYPE access_level_type AS ENUM ('ban', 'default', 'suggestive', 'nsfw', 'gay', 'ultimate');
+CREATE TYPE platform_type AS ENUM ('server', 'telegram', 'discord');
+
+CREATE TABLE "user"
+(
+    id              bigint primary key,
+    username        varchar(128),
+    password        bytea,
+    access_level    access_level_type not null ,
+    platform        platform_type
+);
+
+CREATE SCHEMA telegram_bot;
+
+CREATE TABLE telegram_bot.chat
+(
+    id           bigint primary key,
+    title        varchar(255),
+    access_level access_level_type not null
+);
+
+create table telegram_bot.post(
+    id bigserial primary key,
+    user_id bigint not null,
+    content_id int not null,
+    post_date timestamp default NOW(),
+    foreign key (user_id) references "user"(id),
+    foreign key (content_id) references content(ID)
+);
