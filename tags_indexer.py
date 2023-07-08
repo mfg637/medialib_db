@@ -123,3 +123,22 @@ def get_category_of_tag(tag_name, connection):
     :rtype: str(enum(tag_categories))
     """
     return _request(_get_category_of_tag, tag_name, connection=connection)
+
+def wildcard_tag_search(wildcard_string:str, connection):
+    sql_tag_alias_search = (
+        "SELECT * FROM tag_alias WHERE title like %s"
+    )
+    cursor = connection.cursor()
+    sql_wildcard_string = wildcard_string.replace("*", "%")
+    cursor.execute(sql_tag_alias_search, (sql_wildcard_string,))
+    result = cursor.fetchall()
+    cursor.close()
+    return result
+
+def get_tag_info_by_tag_id(tag_id, connection):
+    sql_get_tag_id = "SELECT * FROM tag where ID=%s"
+    cursor = connection.cursor()
+    cursor.execute(sql_get_tag_id, (tag_id,))
+    result = cursor.fetchone()
+    cursor.close()
+    return result
