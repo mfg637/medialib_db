@@ -193,7 +193,7 @@ CREATE TABLE "user"
     id              bigint primary key,
     username        varchar(128),
     password        bytea,
-    access_level    access_level_type not null ,
+    access_level    access_level_type not null default 'default',
     platform        platform_type
 );
 
@@ -203,7 +203,7 @@ CREATE TABLE telegram_bot.chat
 (
     id           bigint primary key,
     title        varchar(255),
-    access_level access_level_type not null
+    access_level access_level_type not null default 'default'
 );
 
 create table telegram_bot.post(

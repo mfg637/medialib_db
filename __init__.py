@@ -470,7 +470,7 @@ def find_duplicates(connection, show_alternates=False):
 def register_user_and_get_info(user_id, platform, connection, username=None, password=None):
     sql_get_user = "SELECT * FROM \"user\" as u where u.id = %s"
     sql_register_telegram = (
-        "insert into \"user\" (id, username) values (%s, %s)"
+        "insert into \"user\" (id, username, platform) values (%s, %s, %s)"
     )
     cursor = connection.cursor()
     cursor.execute(sql_get_user, (user_id,))
@@ -479,10 +479,25 @@ def register_user_and_get_info(user_id, platform, connection, username=None, pas
         if platform != "telegram":
             raise NotImplemented
         if platform == "telegram":
-            cursor.execute(sql_register_telegram, (user_id, username))
+            cursor.execute(sql_register_telegram, (user_id, username, platform))
         connection.commit()
         cursor.execute(sql_get_user, (user_id,))
         user_data = cursor.fetchone()
         cursor.close()
     return user_data
 
+def register_channel_and_get_info(chat_id, title, connection):
+    sql_get_chat = "SELECT * FROM telegram_bot.chat as u where u.id = %s"
+    sql_register_telegram = (
+        "insert into telegram_bot.chat (id, title) values (%s, %s)"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_get_chat, (chat_id,))
+    chat_data = cursor.fetchone()
+    if chat_data is None:
+        cursor.execute(sql_register_telegram, (chat_id, title))
+        connection.commit()
+        cursor.execute(sql_get_chat, (chat_id,))
+        chat_data = cursor.fetchone()
+        cursor.close()
+    return chat_data
