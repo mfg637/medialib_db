@@ -487,21 +487,21 @@ class User:
 
 
 
-def register_user_and_get_info(user_id, platform, connection, username=None, password=None):
+def register_user_and_get_info(user_platform_id, platform, connection, username=None, password=None):
     sql_get_user = "SELECT * FROM \"user\" as u where u.platform = %s and u.platform_id = %s"
     sql_register_telegram = (
         "insert into \"user\" (platform, platform_id, username) values (%s, %s, %s)"
     )
     cursor = connection.cursor()
-    cursor.execute(sql_get_user, (platform, user_id))
+    cursor.execute(sql_get_user, (platform, user_platform_id))
     user_data = cursor.fetchone()
     if user_data is None:
         if platform != "telegram":
             raise NotImplemented
         if platform == "telegram":
-            cursor.execute(sql_register_telegram, (platform, user_id, username))
+            cursor.execute(sql_register_telegram, (platform, user_platform_id, username))
         connection.commit()
-        cursor.execute(sql_get_user, (platform, user_id))
+        cursor.execute(sql_get_user, (platform, user_platform_id))
         user_data = cursor.fetchone()
         cursor.close()
     return User(user_data[0], user_data[1], user_data[2], user_data[3], ACCESS_LEVEL[user_data[5].upper()])
@@ -527,3 +527,22 @@ def register_channel_and_get_info(chat_id, title, connection):
         chat_data = cursor.fetchone()
         cursor.close()
     return TGChat(chat_data[0], chat_data[1], ACCESS_LEVEL[chat_data[2].upper()])
+
+def register_post(user_id, content_id, connection):
+    sql_register_post = (
+        "INSERT INTO telegram_bot.post (user_id, content_id) VALUES (%s, %s) RETURNING id"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_register_post, (user_id, content_id))
+    post_id = cursor.fetchone()[0]
+    cursor.close()
+    connection.commit()
+    return post_id
+
+def get_post(post_id, connection):
+    sql_get_post = "SELECT * FROM telegram_bot.post WHERE id = %s"
+    cursor = connection.cursor()
+    cursor.execute(sql_get_post, (post_id,))
+    result = cursor.fetchone()
+    cursor.close()
+    return result
