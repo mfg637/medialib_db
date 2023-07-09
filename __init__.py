@@ -468,20 +468,20 @@ def find_duplicates(connection, show_alternates=False):
     return results
 
 def register_user_and_get_info(user_id, platform, connection, username=None, password=None):
-    sql_get_user = "SELECT * FROM \"user\" as u where u.id = %s"
+    sql_get_user = "SELECT * FROM \"user\" as u where u.platform = %s and u.platform_id = %s"
     sql_register_telegram = (
-        "insert into \"user\" (id, username, platform) values (%s, %s, %s)"
+        "insert into \"user\" (platform, platform_id, username) values (%s, %s, %s)"
     )
     cursor = connection.cursor()
-    cursor.execute(sql_get_user, (user_id,))
+    cursor.execute(sql_get_user, (platform, user_id))
     user_data = cursor.fetchone()
     if user_data is None:
         if platform != "telegram":
             raise NotImplemented
         if platform == "telegram":
-            cursor.execute(sql_register_telegram, (user_id, username, platform))
+            cursor.execute(sql_register_telegram, (platform, user_id, username))
         connection.commit()
-        cursor.execute(sql_get_user, (user_id,))
+        cursor.execute(sql_get_user, (platform, user_id))
         user_data = cursor.fetchone()
         cursor.close()
     return user_data

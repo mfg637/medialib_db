@@ -190,12 +190,15 @@ CREATE TYPE platform_type AS ENUM ('server', 'telegram', 'discord');
 
 CREATE TABLE "user"
 (
-    id              bigint primary key,
+    id              bigserial primary key,
+    platform        platform_type not null,
+    platform_id     bigint,
     username        varchar(128),
     password        bytea,
-    access_level    access_level_type not null default 'default',
-    platform        platform_type
+    access_level    access_level_type not null default 'default'
 );
+
+create index platform_id on "user"(platform, platform_id);
 
 CREATE SCHEMA telegram_bot;
 
