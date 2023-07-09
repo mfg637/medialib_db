@@ -1,4 +1,5 @@
 import dataclasses
+import enum
 import pathlib
 
 from . import files_by_tag_search
@@ -467,6 +468,25 @@ def find_duplicates(connection, show_alternates=False):
     cursor.close()
     return results
 
+
+class ACCESS_LEVEL(enum.IntEnum):
+    BAN = 0
+    DEFAULT = 1
+    SUGGESTIVE = 2
+    NSFW = 3
+    GAY = 4
+    ULTIMATE = 5
+
+@dataclasses.dataclass
+class User:
+    id: int
+    platform: str
+    platform_id: int
+    username: str
+    access_level: ACCESS_LEVEL
+
+
+
 def register_user_and_get_info(user_id, platform, connection, username=None, password=None):
     sql_get_user = "SELECT * FROM \"user\" as u where u.platform = %s and u.platform_id = %s"
     sql_register_telegram = (
@@ -484,7 +504,13 @@ def register_user_and_get_info(user_id, platform, connection, username=None, pas
         cursor.execute(sql_get_user, (platform, user_id))
         user_data = cursor.fetchone()
         cursor.close()
-    return user_data
+    return User(user_data[0], user_data[1], user_data[2], user_data[3], ACCESS_LEVEL[user_data[5].upper()])
+
+@dataclasses.dataclass
+class TGChat:
+    id: int
+    title: str
+    access_level: ACCESS_LEVEL
 
 def register_channel_and_get_info(chat_id, title, connection):
     sql_get_chat = "SELECT * FROM telegram_bot.chat as u where u.id = %s"
@@ -500,4 +526,4 @@ def register_channel_and_get_info(chat_id, title, connection):
         cursor.execute(sql_get_chat, (chat_id,))
         chat_data = cursor.fetchone()
         cursor.close()
-    return chat_data
+    return TGChat(chat_data[0], chat_data[1], ACCESS_LEVEL[chat_data[2].upper()])
