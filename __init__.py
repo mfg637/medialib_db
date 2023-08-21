@@ -469,6 +469,22 @@ def find_duplicates(connection, show_alternates=False):
     return results
 
 
+def find_content_by_hash(value_hash:str, hue_hash: int, saturation_hash: int, connection) -> list[int]:
+    sql_find_duplicates_by_hash = (
+        "select content.ID "
+        "from content join imagehash on content.ID = imagehash.content_id "
+        "where value_hash = decode(%s, 'hex') and hue_hash = %s and saturation_hash = %s;"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_find_duplicates_by_hash, (value_hash, hue_hash, saturation_hash))
+    raw_result = cursor.fetchall()
+    cursor.close()
+    result = []
+    for response_row in raw_result:
+        result.append(response_row[0])
+    return result
+
+
 class ACCESS_LEVEL(enum.IntEnum):
     BAN = 0
     DEFAULT = 1
