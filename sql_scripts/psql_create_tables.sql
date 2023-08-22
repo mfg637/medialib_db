@@ -185,6 +185,12 @@ create table album_order (
     "order" integer not null
 );
 
+create table alternate_sources(
+    content_id integer not null references content,
+    origin            varchar(32)   not null,
+    origin_content_id varchar(128)  not null
+);
+
 CREATE TYPE access_level_type AS ENUM ('ban', 'default', 'suggestive', 'nsfw', 'gay', 'ultimate');
 CREATE TYPE platform_type AS ENUM ('server', 'telegram', 'discord');
 
