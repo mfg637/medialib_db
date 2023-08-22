@@ -1,3 +1,4 @@
+import base64
 import json
 import argparse
 import logging
@@ -7,7 +8,6 @@ import dataclasses
 import psycopg2.errors
 
 import medialib_db.common
-import shared_code
 
 try:
     from . import config
@@ -35,7 +35,7 @@ class ContentRepresentationUnit:
     format: str
 
     def get_path_str(self):
-        return shared_code.str_to_base32(str(self.file_path.relative_to(config.relative_to)))
+        return base64.b32encode(str(self.file_path.relative_to(config.relative_to)).encode("utf-8")).decode("utf-8")
 
 
 MEDIA_TYPE_CODES = {
