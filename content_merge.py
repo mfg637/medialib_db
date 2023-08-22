@@ -126,6 +126,15 @@ if __name__ == '__main__':
         sql_remove_thumbnails = (
             "delete from thumbnail where content_id = %s;"
         )
+        print("Add alternate source")
+        if content_to_merge_metadata[6] is not None and content_to_merge_metadata[7] is not None:
+            sql_add_alternate_source = (
+                "INSERT INTO alternate_sources VALUES (%s, %s, %s)"
+            )
+            cursor.execute(
+                sql_add_alternate_source,
+                (destination_content_id, content_to_merge_metadata[6], content_to_merge_metadata[7])
+            )
         print("Deleting thumbnails metadata…")
         cursor.execute(sql_remove_thumbnails, (content_to_merge_id,))
         sql_remove_imagehash = (
