@@ -482,6 +482,16 @@ def find_content_by_hash(value_hash:str, hue_hash: int, saturation_hash: int, co
     return raw_result
 
 
+def mark_alternate_version(first_content_id: int, second_content_id: int, connection):
+    sql_mark_alternate = (
+        "update imagehash set alternate_version = TRUE where content_id in (%s, %s)"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_mark_alternate, (first_content_id, second_content_id))
+    cursor.close()
+    connection.commit()
+
+
 class ACCESS_LEVEL(enum.IntEnum):
     BAN = 0
     DEFAULT = 1
