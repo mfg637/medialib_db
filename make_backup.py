@@ -49,6 +49,12 @@ class AlbumOrder:
 
 
 @dataclasses.dataclass
+class AlternateSource:
+    origin_name: str
+    origin_content_id: str
+
+
+@dataclasses.dataclass
 class ContentDocument:
     content_id: int
     file_path: pathlib.Path
@@ -60,6 +66,7 @@ class ContentDocument:
     origin_content_id: str
     is_hidden: bool
     tags: set[TagUnique]
+    alternate_sources: list[AlternateSource]
     imagehash: ImageHash | None = None
     representations: list[ContentRepresentationElement] | None = None
     albums: list[AlbumOrder] | None = None
@@ -234,6 +241,7 @@ def main():
         "FROM album_order JOIN album ON album_order.album_id = album.id "
         "WHERE album_order.content_id = %s"
     )
+    sql_get_alternate_sources = "SELECT origin, origin_content_id FROM alternate_sources WHERE content_id = %s"
 
     connection = common.make_connection()
     cursor = connection.cursor()
@@ -271,6 +279,7 @@ def main():
     for content in raw_content_data:
         tags: set[TagUnique] = set()
         content_id = content[0]
+        alternate_sources: list[AlternateSource] = []
         cursor.execute(sql_get_tag_ids, (content_id,))
         tag_ids = cursor.fetchall()
         for tag_id_wrapped in tag_ids:
@@ -308,6 +317,12 @@ def main():
                     tags_processing(raw_album_item[1], cursor),
                     raw_album_item[2]
                 ))
+        cursor.execute(sql_get_alternate_sources, (content_id,))
+        alt_src = cursor.fetchone()
+        while alt_src is not None:
+            alternate_sources.append(AlternateSource(alt_src[0], alt_src[1]))
+
+            alt_src = cursor.fetchone()
 
         content_document = ContentDocument(
             content_id=content_id,
@@ -322,7 +337,8 @@ def main():
             tags=tags,
             imagehash=image_hash,
             representations=representations,
-            albums=albums
+            albums=albums,
+            alternate_sources=alternate_sources
         )
 
         content_document_io = io.StringIO()
