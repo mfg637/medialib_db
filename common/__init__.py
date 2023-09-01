@@ -8,6 +8,11 @@ try:
 except ImportError:
     import config
 
+try:
+    from . import backup
+except ImportError:
+    pass
+
 
 CONTENT_TITLE_MAX_SIZE = 64
 CONTENT_ORIGIN_MAX_SIZE = 32
