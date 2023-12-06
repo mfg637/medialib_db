@@ -142,3 +142,21 @@ def get_tag_info_by_tag_id(tag_id, connection):
     result = cursor.fetchone()
     cursor.close()
     return result
+
+def get_tag_aliases(tag_id, connection) -> list[str]:
+    sql_get_tag_id = "SELECT title FROM tag_alias where tag_id=%s"
+    cursor = connection.cursor()
+    cursor.execute(sql_get_tag_id, (tag_id,))
+    raw_results = cursor.fetchall()
+    result = []
+    for raw_result in raw_results:
+        result.append(raw_result[0])
+    cursor.close()
+    return result
+
+def set_tag_properties(tag_id, tag_name, tag_category, connection):
+    sql_set_properties = "UPDATE tag SET title = %s, category = %s where id = %s"
+    cursor = connection.cursor()
+    cursor.execute(sql_set_properties, (tag_name, tag_category, tag_id))
+    cursor.close()
+    connection.commit()
