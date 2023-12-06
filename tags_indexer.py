@@ -160,3 +160,17 @@ def set_tag_properties(tag_id, tag_name, tag_category, connection):
     cursor.execute(sql_set_properties, (tag_name, tag_category, tag_id))
     cursor.close()
     connection.commit()
+
+def add_alias(tag_id, alias_name, connection):
+    sql_set_properties = "INSERT INTO tag_alias (tag_id, title) VALUES (%s, %s)"
+    cursor = connection.cursor()
+    cursor.execute(sql_set_properties, (tag_id, alias_name))
+    cursor.close()
+    connection.commit()
+
+def delete_alias(tag_id, alias_name, connection):
+    sql_set_properties = "DELETE FROM tag_alias WHERE tag_id = %s AND title = %s"
+    cursor = connection.cursor()
+    cursor.execute(sql_set_properties, (tag_id, alias_name))
+    cursor.close()
+    connection.commit()
