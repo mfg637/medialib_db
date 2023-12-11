@@ -174,3 +174,54 @@ def delete_alias(tag_id, alias_name, connection):
     cursor.execute(sql_set_properties, (tag_id, alias_name))
     cursor.close()
     connection.commit()
+
+def get_content_ids_by_tag_id(tag_id, connection) -> list[int]:
+    sql_get_content_ids = "SELECT content_id FROM content_tags_list where tag_id = %s"
+    cursor = connection.cursor()
+    cursor.execute(sql_get_content_ids, (tag_id,))
+    raw_results = cursor.fetchall()
+    result = []
+    for raw_result in raw_results:
+        result.append(raw_result[0])
+    cursor.close()
+    return result
+
+def merge_tags(first_tag_id: int, second_tag_id: int, connection):
+    """
+    Merge first tag to second tag by their IDs.
+    :param first_tag_id: ID of tag that should be deleted
+    :param second_tag_id: ID of tag that should stay
+    :param connection: Medialib database connection
+    """
+    first_content_list = set(get_content_ids_by_tag_id(first_tag_id, connection))
+    second_content_list = set(get_content_ids_by_tag_id(second_tag_id, connection))
+    reset_ids_set = first_content_list - second_content_list
+    remove_first_id_set = first_content_list.intersection(second_content_list)
+    sql_reset_ids = "UPDATE content_tags_list SET tag_id = %s WHERE content_id = %s AND tag_id = %s"
+    cursor = connection.cursor()
+    logger.info("replace {} tag ID's".format(len(reset_ids_set)))
+    for content_id in reset_ids_set:
+        cursor.execute(sql_reset_ids, (second_tag_id, content_id, first_tag_id))
+    sql_delete_connection = "DELETE FROM content_tags_list WHERE content_id = %s AND tag_id = %s"
+    logger.info("delete {} content to tag connections".format(len(remove_first_id_set)))
+    for content_id in remove_first_id_set:
+        cursor.execute(sql_delete_connection, (content_id, first_tag_id))
+    logger.info("reset aliases")
+    sql_reset_alias = "UPDATE tag_alias SET tag_id = %s WHERE tag_id = %s"
+    cursor.execute(sql_reset_alias, (second_tag_id, first_tag_id))
+    logger.info("check parents")
+    sql_check_parent_of_tag = "SELECT parent FROM tag where id = %s"
+    sql_reset_parent = "UPDATE tag SET parent = NULL where id = %s"
+    cursor.execute(sql_check_parent_of_tag, (second_tag_id,))
+    parent = cursor.fetchone()[0]
+    if parent == first_tag_id:
+        cursor.execute(sql_reset_parent, (second_tag_id,))
+    cursor.execute(sql_check_parent_of_tag, (first_tag_id,))
+    parent = cursor.fetchone()[0]
+    if parent == second_tag_id:
+        cursor.execute(sql_reset_parent, (first_tag_id,))
+    logger.info("REMOVING first tag")
+    sql_delete_first_tag = "DELETE FROM tag WHERE id = %s"
+    cursor.execute(sql_delete_first_tag, (first_tag_id,))
+    cursor.close()
+    connection.commit()
