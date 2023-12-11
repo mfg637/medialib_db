@@ -28,8 +28,13 @@ def _check_tag_exists(cursor, tag_name: str, tag_category: str):
     _tag_name = tag_name.replace("_", " ")
     logger.debug("query=\"{}\" title=\"{}\" category=\"{}\"".format(sql_select_tag_query, _tag_name, tag_category))
     cursor.execute(sql_select_tag_query, (_tag_name, tag_category))
-    # returns ID of tag
-    return cursor.fetchone()
+    id = cursor.fetchone()
+    if id is None:
+        sql_get_id_of_alias = \
+            "SELECT ID FROM tag WHERE id = (SELECT tag_id FROM tag_alias WHERE tag_alias.title = %s) and category=%s"
+        cursor.execute(sql_get_id_of_alias, (_tag_name, tag_category))
+        id = cursor.fetchone()
+    return id
 
 
 def check_tag_exists(tag_name, tag_category, connection) -> tuple[int,]:
@@ -108,6 +113,11 @@ def _get_category_of_tag(cursor, tag_name):
     get_tag_category_query = "SELECT category FROM tag WHERE title = %s;"
     cursor.execute(get_tag_category_query, (tag_name.replace("_", " "),))
     raw_categories = cursor.fetchall()
+    if raw_categories is None:
+        get_tag_category_by_alias = \
+            "SELECT category FROM tag where id = (SELECT tag_id FROM tag_alias where title = %s)"
+        cursor.execute(get_tag_category_by_alias, (tag_name.replace("_", " "),))
+        raw_categories = cursor.fetchall()
     if raw_categories is not None:
         categories_list = set()
         for raw_category in raw_categories:
