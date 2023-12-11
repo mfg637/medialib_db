@@ -113,7 +113,7 @@ def _get_category_of_tag(cursor, tag_name):
     get_tag_category_query = "SELECT category FROM tag WHERE title = %s;"
     cursor.execute(get_tag_category_query, (tag_name.replace("_", " "),))
     raw_categories = cursor.fetchall()
-    if raw_categories is None:
+    if len(raw_categories) == 0 or raw_categories is None:
         get_tag_category_by_alias = \
             "SELECT category FROM tag where id = (SELECT tag_id FROM tag_alias where title = %s)"
         cursor.execute(get_tag_category_by_alias, (tag_name.replace("_", " "),))
