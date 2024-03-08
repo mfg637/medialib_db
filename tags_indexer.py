@@ -235,3 +235,16 @@ def merge_tags(first_tag_id: int, second_tag_id: int, connection):
     cursor.execute(sql_delete_first_tag, (first_tag_id,))
     cursor.close()
     connection.commit()
+
+def get_tag_id_by_alias(alias, connection):
+    cursor = connection.cursor()
+    sql_template = "SELECT tag_id FROM tag_alias WHERE title=%s"
+    cursor.execute(sql_template, (alias,))
+    result = cursor.fetchone()
+    if result is not None:
+        result = result[0]
+    else:
+        logger.info(f"not found tag by alias: {alias}")
+    cursor.close()
+    return result
+

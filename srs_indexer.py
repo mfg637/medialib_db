@@ -120,13 +120,16 @@ def register(
             for special_tag_category in ("artist", "copyright", "character"):
                 if tag_category == special_tag_category:
                     tag_alias = "{}:{}".format(special_tag_category, tag_name)
-            tag_id = tags_indexer.check_tag_exists(tag_name, _category, connection)
+            tag_id = medialib_db.tags_indexer.get_tag_id_by_alias(
+                tag_alias, connection
+            )
             logger.debug("tag_id={}".format(tag_id.__repr__()))
             if tag_id is None:
                 tag_id = tags_indexer.insert_new_tag(tag_name, _category, tag_alias, connection)
                 verify_tag(tag_id, tag_name, tag_category)
             else:
-                tag_id = tag_id[0]
+                if type(tag_id) is tuple:
+                    tag_id = tag_id[0]
             _tags.append((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
