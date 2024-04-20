@@ -91,7 +91,7 @@ def register(
     """
     cursor = connection.cursor()
 
-    _tags = list()
+    _tags = set()
 
     sql_check_tag_exists = "SELECT title, category FROM tag WHERE id = %s"
 
@@ -130,7 +130,7 @@ def register(
             else:
                 if type(tag_id) is tuple:
                     tag_id = tag_id[0]
-            _tags.append((tag_id, tag_name, _category))
+            _tags.add((tag_id, tag_name, _category))
     sql_insert_content_query = (
         "INSERT INTO content "
         "(id, file_path, title, content_type, description, addition_date, origin, origin_content_id, hidden) "
