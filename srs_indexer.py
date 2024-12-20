@@ -82,6 +82,16 @@ def srs_update_representations(content_id, file_path, cursor):
         ))
 
 
+def deduplicate_tags(_tags: list[tuple[int, str, str]]) -> list[tuple[int, str, str]]:
+    tag_ids = set()
+    deduplicated = []
+    for tag in _tags:
+        if tag[0] not in tag_ids:
+            tag_ids.add(tag[0])
+            deduplicated.append(tag)
+    return deduplicated
+
+
 def register(
         file_path: pathlib.Path, title, media_type, description, origin, content_id, tags, connection
         ) -> int:
@@ -153,6 +163,9 @@ def register(
         return
     content_id = cursor.fetchone()[0]
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
+
+    _tags = deduplicate_tags(_tags)
+
     for tag in _tags:
         verify_tag(tag[0])
         cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
@@ -233,26 +246,11 @@ def index(file_path: pathlib.Path, description=None, auto_open_connection=True):
     )
     content_id = cursor.fetchone()[0]
     sql_insert_content_id_to_tag_id = "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
+
+    tags = deduplicate_tags(tags)
+
     for tag in tags:
-        # TODO: uncomment try-except block, when same exception from postgresql connector occurs
-        #try:
         cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag[0]))
-        # except mysql.connector.IntegrityError:
-        #     get_content_id = "SELECT id FROM content WHERE file_path = %s"
-        #     get_tag_id = "SELECT id FROM tag WHERE title = %s and category = %s"
-        #     cursor.execute(get_content_id, (str(file_path.relative_to(config.relative_to)),))
-        #     content_id = cursor.fetchone()
-        #     if content_id is None:
-        #         raise Exception("Database content insertion error")
-        #     else:
-        #         content_id = content_id[0]
-        #     cursor.execute(get_tag_id, tag[1:])
-        #     tag_id = cursor.fetchone()
-        #     if tag_id is None:
-        #         raise Exception("Database tag not exists error", tag[1:])
-        #     else:
-        #         tag_id = tag_id[0]
-        #     cursor.execute(sql_insert_content_id_to_tag_id, (content_id, tag_id))
 
     common.connection.commit()
     if auto_open_connection:
