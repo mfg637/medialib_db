@@ -569,3 +569,19 @@ def get_post(post_id, connection):
     result = cursor.fetchone()
     cursor.close()
     return result
+
+def register_representation(
+        content_id: int, _format: str, compatibility_level: int, file_path: str, connection
+    ):
+    sql_insert_representation = (
+        "INSERT INTO representations (content_id, format, compatibility_level, file_path) "
+        "VALUES (%s, %s, %s, %s)"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_insert_representation, (
+        content_id,
+        _format,
+        compatibility_level,
+        file_path # use this: str(file_path.relative_to(config.relative_to))
+    ))
+    cursor.close()
