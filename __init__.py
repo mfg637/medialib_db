@@ -585,3 +585,15 @@ def register_representation(
         file_path # use this: str(file_path.relative_to(config.relative_to))
     ))
     cursor.close()
+
+
+def delete_tag(content_id: int, tag_id: int, connection):
+    sql_tag_delete = (
+        "delete from content_tags_list where content_id=%s and tag_id=%s;"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_tag_delete, (
+        content_id,
+        tag_id
+    ))
+    cursor.close()
