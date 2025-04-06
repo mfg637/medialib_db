@@ -114,13 +114,13 @@ def _requests_fabric(
 
 
 def get_media_by_tags(
+        connection,
         *tags: dict[str, typing.Any],
         limit: int = None,
         offset: int = None,
         order_by: ORDERING_BY = ORDERING_BY.NONE,
-        filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER,
+        filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER
     ):
-    connection = common.make_connection()
     cursor = connection.cursor()
     base_sql_code_block = "SELECT ID, file_path, content_type, title from content where "
     _requests_fabric(
@@ -140,17 +140,16 @@ def get_media_by_tags(
         file_path = cursor.fetchone()
     if order_by == ORDERING_BY.RANDOM:
         random.shuffle(list_files)
-    connection.close()
     return list_files
 
 
 def get_all_media(
+        connection,
         limit: int = None,
         offset: int = None,
         order_by: ORDERING_BY = ORDERING_BY.NONE,
         filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER,
     ):
-    connection = common.make_connection()
     cursor = connection.cursor()
     base_sql_code_block = "SELECT ID, file_path, content_type, title from content where "
     _requests_fabric(
@@ -169,19 +168,28 @@ def get_all_media(
         file_path = cursor.fetchone()
     if order_by == ORDERING_BY.RANDOM:
         random.shuffle(list_files)
-    connection.close()
     return list_files
 
 
-def count_files_with_every_tag(*tags: dict[str, typing.Any], filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER):
+def count_media_by_tags(
+        connection, *tags: dict[str, typing.Any], filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER
+    ):
     base_sql_code_block = "SELECT COUNT(*) from content where "
-    connection = common.make_connection()
     cursor = connection.cursor()
-    get_image_id_by_tag_code_block = ("id in (SELECT content_id from content_tags_list where tag_id = "
-                                      "(SELECT tag_id from tag_alias where title=%s))")
 
     _requests_fabric(*tags, base_sql_block=base_sql_code_block, cursor=cursor, filter_hidden=filter_hidden)
 
     result = cursor.fetchone()[0]
-    connection.close()
     return result
+
+
+def get_total_count(connection, filter_hidden: HIDDEN_FILTERING = HIDDEN_FILTERING.FILTER):
+    cursor = connection.cursor()
+    base_sql_code_block = "SELECT count(*) from content where "
+    _requests_fabric(
+        base_sql_block=base_sql_code_block,
+        cursor=cursor,
+        filter_hidden=filter_hidden
+    )
+    item_count = cursor.fetchone()[0]
+    return item_count
