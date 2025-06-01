@@ -28,7 +28,14 @@ def make_connection():
     )
 
 
-def postgres_string_format(tag_name, size):
+def postgres_string_format(tag_name: str | None, size: int) -> str | None:
+    """
+    Check that `tag_name` is shorter than `size`.
+    If len of `tag_name` exceeds `size`,
+    copy first words that fits in `size` limit,
+    and add "…" in the end.
+    If `tag_name` is none, just return None.
+    """
     if tag_name is None:
         return None
     elif len(tag_name) > size:
@@ -40,9 +47,9 @@ def postgres_string_format(tag_name, size):
         new_tag_name = ""
         words_copy = 1
         words_count = len(words)
-        while len(" ".join(words[:words_copy + 1])+"...") < size \
+        while len(" ".join(words[:words_copy + 1])+"…") < size \
                 and words_copy < words_count:
             words_copy += 1
-        new_tag_name = " ".join(words)+"..."
+        new_tag_name = " ".join(words[:words_copy])+"…"
         return new_tag_name[:size]
     return tag_name
