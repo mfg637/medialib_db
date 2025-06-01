@@ -2,3 +2,4 @@
 config.py
 /medialib-dump
 /medialib-dump.tar
+__pycache__
