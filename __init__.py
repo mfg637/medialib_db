@@ -5,6 +5,7 @@ from . import testing
 from . import tags_indexer
 from . import srs_indexer
 from . import config
+from . import content
 from datetime import datetime
 
 import dataclasses
@@ -67,93 +68,6 @@ def get_tag_name_by_id(tag_id: int) -> str:
     result: tuple[str] | None = cursor.fetchone()
     connection.close()
     return common.get_value_or_fail(result, f"Tag by tag id {id} not found")
-
-
-def get_content_metadata_by_file_path(
-    path: pathlib.Path, connection: psycopg2_connection
-) -> (
-    tuple[
-        int,
-        str,
-        str | None,
-        str,
-        str | None,
-        datetime,
-        str | None,
-        str | None,
-        bool,
-    ]
-    | None
-):
-    """
-    Retrieve the metadata of content from the database by its file path.
-
-    Args:
-        path (pathlib.Path): The file path of the content.
-        connection (psycopg2_connection): The database connection.
-
-    Returns:
-        tuple: A tuple containing the following fields:
-            (content_id: int, file_path: str, title: str, content_type: str,
-             description: str, addition_date: datetime, origin: str,
-             origin_content_id: str, hidden: bool)
-        or None if no content is found for the given file path.
-    """
-    cursor = connection.cursor()
-    sql_template = "SELECT * FROM content WHERE file_path=%s"
-    cursor.execute(sql_template, (str(path),))
-    result: (
-        tuple[
-            int,
-            str,
-            str | None,
-            str,
-            str | None,
-            datetime,
-            str | None,
-            str | None,
-            bool,
-        ]
-        | None
-    ) = cursor.fetchone()
-    return result
-
-
-def get_content_metadata_by_content_id(
-    content_id: int, connection: psycopg2_connection
-) -> (
-    tuple[
-        int,
-        str,
-        str | None,
-        str,
-        str | None,
-        datetime,
-        str | None,
-        str | None,
-        bool,
-    ]
-    | None
-):
-    """
-    Retrieve the metadata of content from the database by content_id.
-
-    Args:
-        content_id (int): The ID of the content.
-        connection (psycopg2_connection): The database connection.
-
-    Returns:
-        tuple: A tuple containing the following fields:
-            (content_id: int, file_path: str, title: str, content_type: str,
-             description: str, addition_date: datetime, origin: str,
-             origin_content_id: str, hidden: bool)
-        or None if no content is found for the given ID.
-    """
-    cursor = connection.cursor()
-    sql_template = "SELECT * FROM content WHERE id=%s"
-    cursor.execute(sql_template, (content_id,))
-    result = cursor.fetchone()
-    return result
 
 
 def get_thumbnail_by_filepath(
@@ -343,54 +257,6 @@ def drop_thumbnails(content_id: int, connection: psycopg2_connection):
     sql_template_get_id = "DELETE FROM thumbnail WHERE content_id = %s"
     cursor = connection.cursor()
     cursor.execute(sql_template_get_id, (content_id,))
-    connection.commit()
-
-
-def content_update(
-    content_id: int,
-    content_title: str | None,
-    origin_name: str | None,
-    origin_id: str | None,
-    hidden: bool,
-    description: str | None,
-    connection: psycopg2_connection,
-):
-    """
-    Updates the details of a content record in the database.
-
-    Args:
-        content_id (int): The unique identifier of the content to update.
-        content_title (str | None): The new title of the content, or None.
-        origin_name (str | None): The name of the content's origin,
-            or None if unknown.
-        origin_id (str | None): The identifier of the content in its origin,
-            or None if not applicable.
-        hidden (bool): Whether the content should be marked as hidden.
-        description (str | None): The new description of the content, or None.
-        connection (psycopg2_connection):
-            An active psycopg2 database connection.
-
-    Returns:
-        None
-    """
-    cursor = connection.cursor()
-    sql_template = (
-        "UPDATE content "
-        "SET title = %s, origin = %s, origin_content_id = %s, hidden = %s, "
-        "description = %s "
-        "WHERE id = %s"
-    )
-    cursor.execute(
-        sql_template,
-        (
-            content_title,
-            origin_name,
-            origin_id,
-            hidden,
-            description,
-            content_id,
-        ),
-    )
     connection.commit()
 
 
