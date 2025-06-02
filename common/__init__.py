@@ -1,3 +1,5 @@
+from typing import TypeVar
+
 try:
     import psycopg2
 except ImportError:
@@ -24,7 +26,10 @@ THUMBNAIL_FORMAT_MAX_SIZE = 8
 
 def make_connection():
     return psycopg2.connect(
-        host=config.db_host, database=config.db_name, user=config.db_user, password=config.db_password
+        host=config.db_host,
+        database=config.db_name,
+        user=config.db_user,
+        password=config.db_password,  # type: ignore
     )
 
 
@@ -47,9 +52,46 @@ def postgres_string_format(tag_name: str | None, size: int) -> str | None:
         new_tag_name = ""
         words_copy = 1
         words_count = len(words)
-        while len(" ".join(words[:words_copy + 1])+"…") < size \
-                and words_copy < words_count:
+        while (
+            len(" ".join(words[: words_copy + 1]) + "…") < size
+            and words_copy < words_count
+        ):
             words_copy += 1
-        new_tag_name = " ".join(words[:words_copy])+"…"
+        new_tag_name = " ".join(words[:words_copy]) + "…"
         return new_tag_name[:size]
     return tag_name
+
+
+T = TypeVar("T")
+
+
+def get_value_or_fail(
+    db_record: tuple[T] | None, error_message: str | Exception, _index: int = 0
+) -> T:
+    """
+    Retrieve a value from a database record tuple
+    or raise an error if the record is None.
+
+    Args:
+        db_record (tuple[T] | None):
+            The database record as a tuple, or None if not found.
+        error_message (str | Exception):
+            The error message or Exception to raise if db_record is None.
+        _index (int, optional):
+            The index of the value to retrieve from the tuple. Defaults to 0.
+
+    Returns:
+        T: The value at the specified index in the db_record tuple.
+
+    Raises:
+        Exception: If db_record is None and error_message is a string.
+        Exception: If db_record is None
+            and error_message is an Exception instance (raises it directly).
+    """
+    if db_record is not None:
+        return db_record[_index]
+    else:
+        if isinstance(error_message, Exception):
+            raise error_message
+        else:
+            raise Exception(error_message)
