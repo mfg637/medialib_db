@@ -62,12 +62,9 @@ def postgres_string_format(tag_name: str | None, size: int) -> str | None:
     return tag_name
 
 
-T = TypeVar("T")
-
-
 def get_value_or_fail(
-    db_record: tuple[T] | None, error_message: str | Exception, _index: int = 0
-) -> T:
+    db_record: tuple | None, error_message: str | Exception, _index: int = 0
+):
     """
     Retrieve a value from a database record tuple
     or raise an error if the record is None.
