@@ -2,21 +2,47 @@ CREATE DATABASE medialib
   CHARACTER SET = 'utf8mb4'
   COLLATE = 'utf8mb4_unicode_ci';
 
+---create table content
+-- (
+--     ID                bigint unsigned auto_increment
+--         primary key,
+--     file_path         varchar(255)                                   not null,
+--     title             varchar(255)                                   null,
+--     content_type      enum ('image', 'audio', 'video', 'video-loop') not null,
+--     description       text                                           null,
+--     addition_date     datetime                                       not null,
+--     origin            varchar(32)                                    null,
+--     origin_content_id varchar(255)                                   null,
+--     hidden            tinyint(1) default 0                           not null,
+--     constraint file_path
+--         unique (file_path)
+-- );
+
 create table content
 (
-    ID                bigint unsigned auto_increment
-        primary key,
+    ID                bigint unsigned auto_increment primary key,
     file_path         varchar(255)                                   not null,
     title             varchar(255)                                   null,
     content_type      enum ('image', 'audio', 'video', 'video-loop') not null,
     description       text                                           null,
     addition_date     datetime                                       not null,
-    origin            varchar(32)                                    null,
-    origin_content_id varchar(255)                                   null,
-    hidden            tinyint(1) default 0                           not null,
+
+    hidden            boolean default False                          not null,
     constraint file_path
         unique (file_path)
 );
+
+create table origin
+(
+    medialib_content_id bigint                  not null,
+    origin_name         varchar(32)             not null,
+    origin_content_id   varchar(255)            null,
+    alternate           boolean default True    not null,
+    constraint mlid_fk
+        foreign key (medialib_content_id) references content (id)
+);
+
+create index origin_index on origin (origin_name, origin_content_id);
 
 create table tag
 (
