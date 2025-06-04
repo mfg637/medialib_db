@@ -6,6 +6,8 @@ from . import tags_indexer
 from . import srs_indexer
 from . import config
 from . import content
+from . import origin
+from .origin import find_content_from_source
 from datetime import datetime
 
 import dataclasses
@@ -478,40 +480,6 @@ def get_tags_by_content_id(
             result[tag[2]].append((tag[0], tag[1]))
         tag = cursor.fetchone()
     connection.close()
-    return result
-
-
-def find_content_from_source(
-    origin: str, origin_content_id: str, connection: psycopg2_connection
-) -> tuple[int, str] | None:
-    """
-    Searches for content in the database by its origin and origin content ID.
-
-    Args:
-        origin (str): The source/origin of the content.
-        origin_content_id (str): The unique identifier of the content
-            in the origin system.
-        connection: A database connection object
-            supporting the cursor interface.
-
-    Returns:
-        tuple[int, str] or None: A tuple containing
-        the content ID (int) and file path (str) if found,
-        otherwise None.
-
-    Raises:
-        Exception: Propagates any exceptions
-            raised by the database connection or cursor.
-    """
-    sql_template = (
-        "SELECT ID, file_path FROM content "
-        "WHERE origin = %s and origin_content_id = %s"
-    )
-    cursor = connection.cursor()
-    cursor.execute(sql_template, (origin, origin_content_id))
-    result = cursor.fetchone()
-    # it may be important for some reason
-    cursor.fetchall()
     return result
 
 

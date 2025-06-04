@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 @dataclasses.dataclass(frozen=True)
 class ContentRepresentationUnit:
     file_path: pathlib.Path
-    compatibility_level: int | None
+    compatibility_level: int
     format: str
 
     def get_path_str(self):
