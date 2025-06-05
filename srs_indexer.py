@@ -240,7 +240,7 @@ def register(
     for tag in tags_list:
         verify_tag(tag[0])
         cursor.execute(
-            sql_insert_content_id_to_tag_id, (origin_content_id, tag[0])
+            sql_insert_content_id_to_tag_id, (content_id, tag[0])
         )
 
     if file_path.suffix == ".srs":
