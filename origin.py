@@ -260,3 +260,46 @@ def find_content_from_source(
     result = cursor.fetchone()
     cursor.close()
     return result
+
+
+def _add_origin(
+    cursor: psycopg2_cursor,
+    content_id: int,
+    origin_name: str,
+    origin_id: str | None,
+    alternate: bool,
+):
+    sql_template = "INSERT INTO origin VALUES (%s, %s, %s, %s)"
+    cursor.execute(
+        sql_template, (content_id, origin_name, origin_id, alternate)
+    )
+
+
+def add_origin(
+    connection: psycopg2_connection,
+    content_id: int,
+    origin_name: str,
+    origin_id: str | None,
+    alternate: bool,
+):
+    """
+    Adds a new origin entry to the database for a given content item.
+
+    Args:
+        connection (psycopg2_connection):
+            An active connection to the PostgreSQL database.
+        content_id (int):
+            The unique identifier of the content
+            to which the origin is associated.
+        origin_name (str): The name of the origin (e.g., provider or source).
+        origin_id (str): The unique identifier for the origin.
+        alternate (bool): Indicates whether this origin is an alternate source.
+
+    Raises:
+        psycopg2.DatabaseError:
+            If a database error occurs during the operation.
+    """
+    cursor = connection.cursor()
+    _add_origin(cursor, content_id, origin_name, origin_id, alternate)
+    connection.commit()
+    cursor.close()

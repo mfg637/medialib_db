@@ -297,27 +297,19 @@ def content_register(
     Returns:
         int: The ID of the newly registered content.
     """
-    sql_template = (
-        "INSERT INTO content VALUES "
-        "(DEFAULT, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
-    )
     cursor = connection.cursor()
-    cursor.execute(
-        sql_template,
-        (
-            str(file_path),
-            content_title,
-            content_type,
-            description,
-            addition_date,
-            origin_name,
-            origin_id,
-            hidden,
-        ),
+    content_id = content._content_register(
+        cursor,
+        content_title,
+        file_path,
+        content_type,
+        addition_date,
+        description,
+        hidden,
     )
-    content_id = common.get_value_or_fail(
-        cursor.fetchone(), "Content ID is none for some reason"
-    )
+    if origin_name is not None:
+        origin._add_origin(cursor, content_id, origin_name, origin_id, False)
+    cursor.close()
     connection.commit()
     return content_id
 

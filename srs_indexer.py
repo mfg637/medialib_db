@@ -26,6 +26,17 @@ try:
     from . import tags_indexer
 except ImportError:
     import tags_indexer
+
+try:
+    from . import content
+except ImportError:
+    import content
+
+try:
+    from . import origin
+except ImportError:
+    import origin
+
 import datetime
 
 logger = logging.getLogger(__name__)
@@ -123,7 +134,7 @@ def register(
     title: str | None,
     media_type: str,
     description: str | None,
-    origin: str | None,
+    origin_name: str | None,
     origin_content_id: str | None,
     tags: dict[str, list[str]],
     connection: psycopg2_connection,
@@ -205,34 +216,21 @@ def register(
                 if type(tag_id) is tuple:
                     tag_id = tag_id[0]
             _tags.add((tag_id, tag_name, _category))
-    sql_insert_content_query = (
-        "INSERT INTO content "
-        "(id, file_path, title, content_type, description, addition_date, "
-        "origin, origin_content_id, hidden) "
-        "VALUES (DEFAULT, %s, %s, %s, %s, NOW(), %s, %s, FALSE) RETURNING id"
+
+    content_id = content._content_register(
+        cursor,
+        title,
+        file_path.relative_to(config.relative_to),
+        media_type,
+        None,
+        description,
+        False,
     )
-    try:
-        cursor.execute(
-            sql_insert_content_query,
-            (
-                str(file_path.relative_to(config.relative_to)),
-                medialib_db.common.postgres_string_format(
-                    title, common.CONTENT_TITLE_MAX_SIZE
-                ),
-                media_type,
-                description,
-                origin,
-                origin_content_id,
-            ),
+    if origin_name is not None:
+        origin._add_origin(
+            cursor, content_id, origin_name, origin_content_id, False
         )
-    except psycopg2.errors.UniqueViolation:
-        # triggers in same file path case (file exists)
-        return
-    content_id = cursor.fetchone()
-    if content_id is not None:
-        content_id = content_id[0]
-    else:
-        raise Exception("Unexpected None at origin_content_id")
+
     sql_insert_content_id_to_tag_id = (
         "INSERT INTO content_tags_list (content_id, tag_id) VALUES (%s, %s)"
     )
@@ -255,6 +253,7 @@ def register(
 def index(
     file_path: pathlib.Path, description=None, auto_open_connection=True
 ):
+    raise NotImplementedError("Function index is outdated.")
     if auto_open_connection:
         common.open_connection_if_not_opened()
     elif common.connection is None:

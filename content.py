@@ -1,7 +1,9 @@
 from psycopg2.extensions import connection as psycopg2_connection
+from psycopg2.extensions import cursor as psycopg2_cursor
 from datetime import datetime
-import dataclasses
+from . import common
 
+import dataclasses
 import pathlib
 
 
@@ -53,7 +55,7 @@ def get_content_metadata_by_path(
             pathlib.Path(result[1]),
             result[3],
             result[5],
-            bool(result[8]),
+            bool(result[6]),
             result[2],
             result[4],
         )
@@ -85,7 +87,7 @@ def get_content_metadata_by_id(
             pathlib.Path(result[1]),
             result[3],
             result[5],
-            bool(result[8]),
+            bool(result[6]),
             result[2],
             result[4],
         )
@@ -130,3 +132,114 @@ def content_update(
         ),
     )
     connection.commit()
+
+
+def _content_register(
+    cursor: psycopg2_cursor,
+    content_title: str | None,
+    file_path: pathlib.Path | str,
+    content_type: str,
+    addition_date: datetime | None,
+    description: str | None,
+    hidden: bool,
+) -> int:
+    """
+    Registers new content in the database.
+
+    Inserts a new record into the 'content' table with the provided metadata
+    and returns the generated content ID.
+
+    Args:
+        connection: A database connection object.
+        content_title (str): The title of the content.
+        file_path (str or Path): The file path to the content.
+        content_type (str): The type/category of the content.
+        addition_date (str or datetime): The date the content was added.
+        description (str): A description of the content.
+        hidden (bool, optional): Whether the content is hidden.
+            Defaults to False.
+
+    Returns:
+        int: The ID of the newly registered content.
+    """
+    sql_regular_template = (
+        "INSERT INTO content VALUES "
+        "(DEFAULT, %s, %s, %s, %s, %s, %s) RETURNING id"
+    )
+    sql_date_now_template = (
+        "INSERT INTO content VALUES "
+        "(DEFAULT, %s, %s, %s, %s, NOW(), %s) RETURNING id"
+    )
+    if addition_date is not None:
+        cursor.execute(
+            sql_regular_template,
+            (
+                str(file_path),
+                common.postgres_string_format(
+                    content_title, common.CONTENT_TITLE_MAX_SIZE
+                ),
+                content_type,
+                description,
+                addition_date,
+                hidden,
+            ),
+        )
+    else:
+        cursor.execute(
+            sql_date_now_template,
+            (
+                str(file_path),
+                common.postgres_string_format(
+                    content_title, common.CONTENT_TITLE_MAX_SIZE
+                ),
+                content_type,
+                description,
+                hidden,
+            ),
+        )
+    content_id = common.get_value_or_fail(
+        cursor.fetchone(), "Content ID is none for some reason"
+    )
+    return content_id
+
+
+def content_register(
+    connection: psycopg2_connection,
+    content_title: str | None,
+    file_path: pathlib.Path | str,
+    content_type: str,
+    addition_date: datetime | None,
+    description: str | None,
+    hidden: bool = False,
+) -> int:
+    """
+    Registers new content in the media library database.
+
+    Args:
+        connection (psycopg2_connection):
+            An active connection to the PostgreSQL database.
+        content_title (str | None):
+            The title of the content to register. Can be None.
+        file_path (pathlib.Path | str): The file path to the content.
+        content_type (str): The type/category of the content.
+        addition_date (datetime): The date the content was added.
+        description (str | None): A description of the content. Can be None.
+        hidden (bool, optional):
+            Whether the content should be hidden. Defaults to False.
+
+    Returns:
+        int: The ID of the newly registered content.
+    """
+    cursor = connection.cursor()
+    result = _content_register(
+        cursor,
+        content_title,
+        file_path,
+        content_type,
+        addition_date,
+        description,
+        hidden,
+    )
+    cursor.close()
+    connection.commit()
+    return result
