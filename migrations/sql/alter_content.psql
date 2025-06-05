@@ -1,0 +1,25 @@
+ALTER TABLE content
+    DROP COLUMN origin,
+    DROP COLUMN origin_content_id,
+    ALTER COLUMN id TYPE bigint;
+
+ALTER TABLE album_order
+    ALTER COLUMN content_id TYPE bigint;
+
+--- Drop due to all data it contains already moved to origin table
+DROP TABLE alternate_sources;
+
+ALTER TABLE content_tags_list
+    ALTER COLUMN content_id TYPE bigint;
+
+ALTER TABLE imagehash
+    ALTER COLUMN content_id TYPE bigint;
+
+--- no more in use
+DROP TABLE telegram_bot.post;
+
+ALTER TABLE representations
+    ALTER COLUMN content_id TYPE bigint;
+
+ALTER TABLE thumbnail
+    ALTER COLUMN content_id TYPE bigint;
