@@ -243,7 +243,7 @@ def _get_category_of_tag(
     return None
 
 
-def get_category_of_tag(tag_name: str, connection: psycopg2_connection):
+def get_category_of_tag(tag_name: str, connection: psycopg2_connection) -> set[str] | None:
     """
     Retrieve the category associated with a given tag name from the database.
 
