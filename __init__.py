@@ -7,6 +7,7 @@ from . import srs_indexer
 from . import config
 from . import content
 from . import origin
+from . import attachment
 from .origin import find_content_from_source
 from datetime import datetime
 
