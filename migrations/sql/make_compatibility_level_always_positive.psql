@@ -1,0 +1,2 @@
+ALTER TABLE representations
+    ADD CONSTRAINT compatibility_level_positive CHECK (compatibility_level >= 0);

@@ -123,13 +123,21 @@ CREATE TABLE thumbnail
 );
 
 create table representations (
-    content_id integer    not null
+    content_id          bigint     not null
         references content,
-    width           smallint   null,
-    height          smallint   null,
-    format          varchar(8) not null,
-    compatibility_level smallint null,
-    file_path       text       not null
+    width               smallint    null,
+    height              smallint    null,
+    format              varchar(8)  not null,
+    compatibility_level smallint    null check (compatibility_level >= 0),
+    file_path           text        not null
+);
+
+create table attachment (
+    content_id      bigint      not null
+        references content,
+    format          varchar(8)  not null,
+    file_path       text        not null,
+    title           varchar(64) not null
 );
 
 create table imagehash (
