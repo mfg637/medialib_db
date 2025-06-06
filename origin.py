@@ -141,6 +141,20 @@ class Origin:
         return origin_type().get_prefix()
 
 
+def _get_origins_of_content(
+    cursor: psycopg2_cursor, content_id: int
+) -> list[Origin]:
+    sql_template = "SELECT * FROM origin WHERE medialib_content_id=%s"
+    cursor.execute(sql_template, (content_id,))
+    raw_results: list[tuple[int, str, str | None, bool]] = cursor.fetchall()
+    result: list[Origin] = []
+    for raw_result in raw_results:
+        result.append(
+            Origin(raw_result[0], raw_result[1], raw_result[2], raw_result[3])
+        )
+    return result
+
+
 def get_origins_of_content(
     connection: psycopg2_connection, content_id: int
 ) -> list[Origin]:
@@ -167,14 +181,7 @@ def get_origins_of_content(
             and matches the structure of the query result.
     """
     cursor = connection.cursor()
-    sql_template = "SELECT * FROM origin WHERE medialib_content_id=%s"
-    cursor.execute(sql_template, (content_id,))
-    raw_results: list[tuple[int, str, str | None, bool]] = cursor.fetchall()
-    result: list[Origin] = []
-    for raw_result in raw_results:
-        result.append(
-            Origin(raw_result[0], raw_result[1], raw_result[2], raw_result[3])
-        )
+    result = _get_origins_of_content(cursor, content_id)
     cursor.close()
     return result
 

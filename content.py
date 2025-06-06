@@ -63,21 +63,9 @@ def get_content_metadata_by_path(
         return None
 
 
-def get_content_metadata_by_id(
-    content_id: int, connection: psycopg2_connection
+def _get_content_metadata_by_id(
+    content_id: int, cursor: psycopg2_cursor
 ) -> Content | None:
-    """
-    Retrieve the metadata of content from the database by content_id.
-
-    Args:
-        content_id (int): The ID of the content.
-        connection (psycopg2_connection): The database connection.
-
-    Returns:
-        Content: The Content object if found,
-            or None if no content is found for the given ID.
-    """
-    cursor = connection.cursor()
     sql_template = "SELECT * FROM content WHERE id=%s"
     cursor.execute(sql_template, (content_id,))
     result = cursor.fetchone()
@@ -93,6 +81,26 @@ def get_content_metadata_by_id(
         )
     else:
         return None
+
+
+def get_content_metadata_by_id(
+    content_id: int, connection: psycopg2_connection
+) -> Content | None:
+    """
+    Retrieve the metadata of content from the database by content_id.
+
+    Args:
+        content_id (int): The ID of the content.
+        connection (psycopg2_connection): The database connection.
+
+    Returns:
+        Content: The Content object if found,
+            or None if no content is found for the given ID.
+    """
+    cursor = connection.cursor()
+    result = _get_content_metadata_by_id(content_id, cursor)
+    cursor.close()
+    return result
 
 
 def content_update(
