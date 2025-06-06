@@ -308,5 +308,50 @@ def add_origin(
     """
     cursor = connection.cursor()
     _add_origin(cursor, content_id, origin_name, origin_id, alternate)
-    connection.commit()
     cursor.close()
+    connection.commit()
+
+
+def _purge_origins(cursor: psycopg2_cursor, content_id: int):
+    """
+    Deletes all records from the 'origin' table in the database
+    that are associated with the specified media library content ID.
+
+    Args:
+        cursor (psycopg2_cursor):
+            A database cursor object used to execute SQL commands.
+        content_id (int):
+            The ID of the media library content
+            whose origins should be deleted.
+
+    Returns:
+        None
+
+    Raises:
+        psycopg2.DatabaseError: If a database error occurs during execution.
+    """
+    sql_template = "DELETE FROM origin WHERE medialib_content_id = %s"
+    cursor.execute(sql_template, (content_id,))
+
+
+def purge_origins(connection: psycopg2_connection, content_id: int):
+    """
+    Removes all origin records
+    associated with a given content ID from the database.
+
+    Args:
+        connection (psycopg2_connection):
+            An active connection to the PostgreSQL database.
+        content_id (int):
+            The ID of the content whose origins should be purged.
+
+    Raises:
+        Any exceptions raised by the underlying database operations.
+
+    Note:
+        This function commits the transaction after purging the origins.
+    """
+    cursor = connection.cursor()
+    _purge_origins(cursor, content_id)
+    cursor.close()
+    connection.commit()
