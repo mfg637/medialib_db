@@ -2,35 +2,22 @@ CREATE DATABASE medialib
   CHARACTER SET = 'utf8mb4'
   COLLATE = 'utf8mb4_unicode_ci';
 
----create table content
--- (
---     ID                bigint unsigned auto_increment
---         primary key,
---     file_path         varchar(255)                                   not null,
---     title             varchar(255)                                   null,
---     content_type      enum ('image', 'audio', 'video', 'video-loop') not null,
---     description       text                                           null,
---     addition_date     datetime                                       not null,
---     origin            varchar(32)                                    null,
---     origin_content_id varchar(255)                                   null,
---     hidden            tinyint(1) default 0                           not null,
---     constraint file_path
---         unique (file_path)
--- );
+create type T_CONTENT_TYPE as enum ('image', 'audio', 'video', 'video-loop');
 
 create table content
 (
-    ID                bigint unsigned auto_increment primary key,
-    file_path         varchar(255)                                   not null,
-    title             varchar(255)                                   null,
-    content_type      enum ('image', 'audio', 'video', 'video-loop') not null,
+    ID                bigserial primary key,
+    file_path         text                                           not null,
+    title             varchar(64)                                    null,
+    content_type      T_CONTENT_TYPE                                 not null,
     description       text                                           null,
-    addition_date     datetime                                       not null,
+    addition_date     timestamp                                      not null,
 
-    hidden            boolean default False                          not null,
+    hidden            boolean default FALSE                          not null,
     constraint file_path
         unique (file_path)
 );
+
 
 create table origin
 (
@@ -44,13 +31,15 @@ create table origin
 
 create index origin_index on origin (origin_name, origin_content_id);
 
+create type T_CATEGORY as enum
+    ('artist', 'set', 'copyright', 'rating', 'species', 'content', 'character');
+
 create table tag
 (
-    ID       bigint unsigned auto_increment
-        primary key,
-    title    varchar(250)                                                                                            null,
-    category enum ('artist', 'set', 'copyright', 'original character', 'rating', 'species', 'content', 'character') null,
-    parent   bigint unsigned                                                                                         null,
+    ID       bigserial      primary key,
+    title    varchar(240)   null,                                                                                           null,
+    category T_CATEGORY     null,
+    parent   bigint         null,
     constraint uniq_tag
         unique (title, category),
     constraint tag_ibfk_1
@@ -62,35 +51,36 @@ create index parent
 
 create table content_tags_list
 (
-    content_id bigint unsigned not null,
-    tag_id     bigint unsigned not null,
+    content_id bigint not null,
+    tag_id     bigint not null,
     constraint content_tags_list_FK
         foreign key (content_id) references content (ID),
     constraint content_tags_list_FK_1
-        foreign key (tag_id) references tag (ID)
+        foreign key (tag_id) references tag (ID),
+    constraint uniq_keys UNIQUE (content_id, tag_id)
 );
 
 create table tag_alias
 (
-    ID     bigint unsigned auto_increment
-        primary key,
-    tag_id bigint unsigned not null,
-    title  varchar(251)    not null,
+    tag_id bigint              not null,
+    title  varchar(255)        not null,
     constraint title
         unique (title),
     constraint tag_alias_FK
         foreign key (tag_id) references tag (ID)
 );
 
-DELIMITER ^^^
-CREATE PROCEDURE get_tags_ids (IN tag_alias_name VARCHAR(251))
-BEGIN
-    # taken from https://stackoverflow.com/a/33737203
+create index tag_alias_index on tag_alias (title);
+
+CREATE FUNCTION get_tags_ids (IN tag_alias_name varchar(255))
+RETURNS TABLE (id bigint)
+language sql as $$
+    -- taken from https://stackoverflow.com/a/33737203
     with recursive get_tags_ids_r (id, parent_id) as (
         select      ID,
                     parent
         from        tag
-        where       ID = (SELECT tag_id from tag_alias where tag_alias.title=tag_alias_name COLLATE utf8mb4_unicode_ci)
+        where       ID = (SELECT tag_id from tag_alias where tag_alias.title=tag_alias_name)
         union all
         select      t.ID,
                     t.parent
@@ -99,17 +89,149 @@ BEGIN
                 on  t.parent = t_rec.ID
     )
     select ID from get_tags_ids_r;
-end^^^
-DELIMITER ;
+$$;
+
+CREATE FUNCTION get_parent_tag_ids (IN tag_id bigint)
+RETURNS TABLE (id bigint)
+language sql as $$
+    -- taken from https://stackoverflow.com/a/33737203
+    with recursive get_tags_ids_r (id, parent_id) as (
+        select      ID,
+                    parent
+        from        tag
+        where       ID = tag_id
+        union all
+        select      t.ID,
+                    t.parent
+        from        tag t
+        inner join  get_tags_ids_r as t_rec
+                on  t.parent = t_rec.ID
+    )
+    select ID from get_tags_ids_r;
+$$;
 
 CREATE TABLE thumbnail
 (
-	content_id bigint unsigned not null,
-	width int not null,
-	height int not null,
-	generation_date date not null,
-	format varchar(8) not null,
-	file_path varchar(255) not null,
+	content_id      bigint       not null,
+	width           int2         not null,
+	height          int2         not null,
+	generation_date timestamp    not null,
+	format          varchar(8)   not null,
+	file_path       text         not null,
     primary key (content_id, width, height, format),
 	foreign key (content_id) references content(ID)
+);
+
+create table representations (
+    content_id integer    not null
+        references content,
+    width           smallint   null,
+    height          smallint   null,
+    format          varchar(8) not null,
+    compatibility_level smallint null,
+    file_path       text       not null
+);
+
+create table imagehash (
+    content_id integer
+        not null
+        unique
+        references content,
+    aspect_ratio real not null,
+    hs_hash int not null,
+    value_hash bigint not null,
+    alternate_version boolean not null default false
+);
+
+create index imagehash_index on imagehash (
+    value_hash, hs_hash
+);
+
+create table imagehash (
+    content_id integer
+        not null
+        unique
+        references content,
+    aspect_ratio real not null,
+    hue_hash bigint not null,
+    saturation_hash bigint not null,
+    value_hash bytea not null,
+    alternate_version boolean not null default false
+);
+
+create index imagehash_index on imagehash (
+    value_hash, hue_hash, saturation_hash
+);
+
+-- album is an ordered set of media content
+-- this table represent general information about an album
+-- ID field needed to prevent repeating set id and album artist id in each
+--      content to album relation
+create table album (
+    ID                  serial primary key,
+    set_tag_id          integer not null references tag,
+    album_artist_tag_id integer not null references tag,
+    constraint uniq_album_id unique (set_tag_id, album_artist_tag_id)
+);
+
+-- tag types validation trigger function
+create function new_album() RETURNS trigger AS $new_album$
+    begin
+        if (select tag.category from tag where ID = NEW.set_tag_id) != 'set' then
+            raise exception 'tag_id_set points to non set tag type';
+        end if;
+        if (select tag.category from tag where ID = NEW.album_artist_tag_id) != 'artist' then
+            raise exception 'tag_id_artist points to non artist tag type';
+        end if;
+        return NEW;
+    end;
+$new_album$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER new_album BEFORE INSERT OR UPDATE ON album
+    FOR EACH ROW EXECUTE FUNCTION new_album();
+
+create table album_order (
+    album_id integer not null references album,
+    content_id integer not null references content,
+    "order" integer not null
+);
+
+--- Deprecated: not in use
+CREATE TYPE access_level_type AS ENUM ('ban', 'default', 'suggestive', 'nsfw', 'gay', 'ultimate');
+CREATE TYPE platform_type AS ENUM ('server', 'telegram', 'discord');
+
+--- Deprecated: not in use
+CREATE TABLE "user"
+(
+    id              bigserial primary key,
+    platform        platform_type not null,
+    platform_id     bigint,
+    username        varchar(128),
+    password        bytea,
+    access_level    access_level_type not null default 'default'
+);
+
+--- Deprecated: not in use
+create index platform_id on "user"(platform, platform_id);
+
+--- Deprecated: not in use
+CREATE SCHEMA telegram_bot;
+
+--- Deprecated: not in use
+CREATE TABLE telegram_bot.chat
+(
+    id           bigint primary key,
+    title        varchar(255),
+    access_level access_level_type not null default 'default'
+);
+
+--- Deprecated: not in use
+create table telegram_bot.post(
+    id bigserial primary key,
+    user_id bigint not null,
+    content_id int not null,
+    post_date timestamp default NOW(),
+    foreign key (user_id) references "user"(id),
+    foreign key (content_id) references content(ID)
 );
