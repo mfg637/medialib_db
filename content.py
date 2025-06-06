@@ -1,7 +1,11 @@
 from psycopg2.extensions import connection as psycopg2_connection
 from psycopg2.extensions import cursor as psycopg2_cursor
 from datetime import datetime
-from . import common
+
+try:
+    from . import common
+except ImportError:
+    import common
 
 import dataclasses
 import pathlib
