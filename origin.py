@@ -155,6 +155,22 @@ def _get_origins_of_content(
     return result
 
 
+def _get_primary_origin(
+    cursor: psycopg2_cursor, content_id
+) -> tuple[str | None, str | None]:
+    origin_name: str | None = None
+    origin_id: str | None = None
+    origins: list[Origin] = _get_origins_of_content(cursor, content_id)
+    for current_origin in origins:
+        if not current_origin.alternate:
+            origin_name = current_origin.origin_name
+            origin_id = current_origin.origin_id
+    if origin_name is None and len(origins) > 0:
+        origin_name = origins[0].origin_name
+        origin_id = origins[0].origin_id
+    return origin_name, origin_id
+
+
 def get_origins_of_content(
     connection: psycopg2_connection, content_id: int
 ) -> list[Origin]:
@@ -182,6 +198,33 @@ def get_origins_of_content(
     """
     cursor = connection.cursor()
     result = _get_origins_of_content(cursor, content_id)
+    cursor.close()
+    return result
+
+
+def get_primary_origin(
+    connection: psycopg2_connection, content_id: int
+) -> tuple[str | None, str | None]:
+    """
+    Retrieves the primary origin information
+    for a given content ID from the database.
+
+    Args:
+        connection (psycopg2_connection):
+            An active connection to the PostgreSQL database.
+        content_id (int):The unique identifier of the content
+            whose primary origin is to be retrieved.
+
+    Returns:
+        tuple[str | None, str | None]:
+            A tuple containing the primary origin's information.
+            The first element is the primary origin's identifier
+                or None if not found.
+            The second element is the primary origin's type
+                or None if not found.
+    """
+    cursor = connection.cursor()
+    result = _get_primary_origin(cursor, content_id)
     cursor.close()
     return result
 
