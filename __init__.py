@@ -21,7 +21,7 @@ if config.enable_openclip:
     from . import openclip_classification
 
 
-def get_tag_name_by_alias(alias: str) -> str:
+def get_tag_name_by_alias(connection: psycopg2_connection, alias: str) -> str:
     """
     Retrieve the tag name associated with a given alias from the database.
 
@@ -30,6 +30,8 @@ def get_tag_name_by_alias(alias: str) -> str:
     and closes the connection before returning the result.
 
     Args:
+        connection (psycopg2_connection): An active connection
+            to the PostgreSQL database.
         alias (str): The unique alias of the tag.
 
     Returns:
@@ -38,7 +40,6 @@ def get_tag_name_by_alias(alias: str) -> str:
     Raises:
         Exception: If no tag is found for the provided alias.
     """
-    connection = common.make_connection()
     cursor = connection.cursor()
     sql_template = (
         "SELECT title FROM tag WHERE id = "
@@ -46,16 +47,18 @@ def get_tag_name_by_alias(alias: str) -> str:
     )
     cursor.execute(sql_template, (alias,))
     result: tuple[str] | None = cursor.fetchone()
-    connection.close()
+    cursor.close()
     return common.get_value_or_fail(result, f"Tag by alias {alias} not found")
 
 
-def get_tag_name_by_id(tag_id: int) -> str:
+def get_tag_name_by_id(connection: psycopg2_connection, tag_id: int) -> str:
     """
     Retrieve the name (title) of a tag from the database by its ID.
     It opens database to make the request.
 
     Args:
+        connection (psycopg2_connection): An active connection
+            to the PostgreSQL database.
         tag_id (int): The unique identifier of the tag.
 
     Returns:
@@ -64,13 +67,14 @@ def get_tag_name_by_id(tag_id: int) -> str:
     Raises:
         Exception: If no tag with the specified ID is found in the database.
     """
-    connection: psycopg2_connection = common.make_connection()
     cursor = connection.cursor()
     sql_template = "SELECT title FROM tag WHERE id = %s"
-    cursor.execute(sql_template, (id,))
+    cursor.execute(sql_template, (tag_id,))
     result: tuple[str] | None = cursor.fetchone()
-    connection.close()
-    return common.get_value_or_fail(result, f"Tag by tag id {id} not found")
+    cursor.close()
+    return common.get_value_or_fail(
+        result, f"Tag by tag id {tag_id} not found"
+    )
 
 
 def get_thumbnail_by_filepath(
