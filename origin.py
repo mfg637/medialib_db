@@ -95,7 +95,7 @@ class TwitterXOrigin(AbstractOriginType):
         if len(id_parts) == 3:
             return (
                 f"https://x.com/{id_parts[0]}/status/"
-                "{id_parts[1]}/photo/{id_parts[2]}"
+                f"{id_parts[1]}/photo/{id_parts[2]}"
             )
         elif len(id_parts) == 2:
             return f"https://x.com/{id_parts[0]}/status/{id_parts[1]}"
