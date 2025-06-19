@@ -562,6 +562,7 @@ def update_file_path(
     content_id: int,
     file_path: pathlib.Path,
     image_hash: tuple[float, bytes, int, int] | None,
+    content_type: str,
     connection: psycopg2_connection,
 ):
     """
@@ -574,6 +575,7 @@ def update_file_path(
         image_hash (tuple[float, bytes, int, int]):
             The image hash to associate with the content.
             If None, the image hash is not updated.
+        content_type (str): The type/category of the content.
         connection (psycopg2_connection):
             The database connection to use for executing the update.
 
@@ -586,12 +588,18 @@ def update_file_path(
         - If an image_hash is provided, updates the image hash for the content.
     """
     sql_template = (
-        "UPDATE content SET file_path = %s, addition_date=NOW() WHERE ID = %s"
+        "UPDATE content "
+        "SET file_path = %s, addition_date=NOW(), content_type=%s "
+        "WHERE ID = %s"
     )
     cursor = connection.cursor()
     cursor.execute(
         sql_template,
-        (str(file_path.relative_to(config.relative_to)), content_id),
+        (
+            str(file_path.relative_to(config.relative_to)),
+            content_type,
+            content_id
+        ),
     )
     if file_path.suffix == ".srs":
         srs_indexer.srs_update_representations(content_id, file_path, cursor)
