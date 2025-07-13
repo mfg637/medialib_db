@@ -598,7 +598,7 @@ def update_file_path(
         (
             str(file_path.relative_to(config.relative_to)),
             content_type,
-            content_id
+            content_id,
         ),
     )
     if file_path.suffix == ".srs":
@@ -683,6 +683,14 @@ def get_image_hash(
     exists_hash_data = cursor.fetchone()
     cursor.close()
     return exists_hash_data
+
+
+def purge_representations(connection: psycopg2_connection, content_id: int):
+    sql_template = "DELETE FROM representations WHERE content_id = %s"
+    cursor = connection.cursor()
+    cursor.execute(sql_template, (content_id,))
+    cursor.close()
+    connection.commit()
 
 
 @dataclasses.dataclass
