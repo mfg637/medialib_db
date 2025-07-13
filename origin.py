@@ -398,3 +398,13 @@ def purge_origins(connection: psycopg2_connection, content_id: int):
     _purge_origins(cursor, content_id)
     cursor.close()
     connection.commit()
+
+
+def mark_origins_alternate(connection: psycopg2_connection, content_id: int):
+    sql_template = (
+        "UPDATE origin SET alternate = true WHERE medialib_content_id = %s"
+    )
+    cursor = connection.cursor()
+    cursor.execute(sql_template, (content_id,))
+    cursor.close()
+    connection.commit()
