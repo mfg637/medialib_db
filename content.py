@@ -205,7 +205,7 @@ def _content_register(
                     content_title, common.CONTENT_TITLE_MAX_SIZE
                 ),
                 content_type,
-                description,
+                common.sanitize_string(description),
                 hidden,
             ),
         )

@@ -1,4 +1,5 @@
 from typing import TypeVar
+from html import escape as html_escape
 
 try:
     import psycopg2
@@ -33,6 +34,12 @@ def make_connection():
     )
 
 
+def sanitize_string(input_str: str | None) -> str | None:
+    if input_str is None:
+        return None
+    return html_escape(str(input_str).replace("\x00", ""))
+
+
 def postgres_string_format(tag_name: str | None, size: int) -> str | None:
     """
     Check that `tag_name` is shorter than `size`.
@@ -58,8 +65,8 @@ def postgres_string_format(tag_name: str | None, size: int) -> str | None:
         ):
             words_copy += 1
         new_tag_name = " ".join(words[:words_copy]) + "…"
-        return new_tag_name[:size]
-    return tag_name
+        return sanitize_string(new_tag_name[:size])
+    return sanitize_string(tag_name)
 
 
 def get_value_or_fail(
