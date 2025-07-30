@@ -40,7 +40,7 @@ def sanitize_string(input_str: str | None) -> str | None:
     return html_escape(str(input_str).replace("\x00", ""))
 
 
-def postgres_string_format(tag_name: str | None, size: int) -> str | None:
+def postgres_string_format(input_string: str | None, size: int) -> str | None:
     """
     Check that `tag_name` is shorter than `size`.
     If len of `tag_name` exceeds `size`,
@@ -48,25 +48,49 @@ def postgres_string_format(tag_name: str | None, size: int) -> str | None:
     and add "…" in the end.
     If `tag_name` is none, just return None.
     """
-    if tag_name is None:
+    if input_string is None:
         return None
-    elif len(tag_name) > size:
+    string_to_validate = sanitize_string(input_string)
+    if len(string_to_validate) > size:
         words = []
-        if "_" in tag_name:
-            words = tag_name.split("_")
+        if "_" in input_string:
+            words = input_string.split("_")
         else:
-            words = tag_name.split(" ")
-        new_tag_name = ""
+            words = input_string.split(" ")
         words_copy = 1
         words_count = len(words)
-        while (
-            len(" ".join(words[: words_copy + 1]) + "…") < size
-            and words_copy < words_count
-        ):
-            words_copy += 1
-        new_tag_name = " ".join(words[:words_copy]) + "…"
-        return sanitize_string(new_tag_name[:size])
-    return sanitize_string(tag_name)
+        string_to_validate = sanitize_string(
+            " ".join(words[: words_copy + 1]) + "…"
+        )
+        if len(string_to_validate) < size:
+            while (
+                len(" ".join(words[: words_copy + 1]) + "…") < size
+                and words_copy < words_count
+            ):
+                words_copy += 1
+                string_to_validate = sanitize_string(
+                    " ".join(words[: words_copy + 1]) + "…"
+                )
+            formatted_string = sanitize_string(
+                " ".join(words[: words_copy + 1]) + "…"
+            )
+            return formatted_string
+        elif len(string_to_validate) > size:
+            characters_copy = size - 1
+            string_to_validate = sanitize_string(
+                input_string[:characters_copy]+"…"
+            )
+            while len(string_to_validate) > size:
+                characters_copy -= 1
+                string_to_validate = sanitize_string(
+                    input_string[:characters_copy]+"…"
+                )
+            formatted_string = sanitize_string(
+                input_string[:characters_copy]+"…"
+            )
+            return formatted_string
+        return string_to_validate
+    return string_to_validate
 
 
 def get_value_or_fail(
