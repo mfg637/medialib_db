@@ -1,6 +1,3 @@
-from typing import TypeVar
-from html import escape as html_escape
-
 try:
     import psycopg2
 except ImportError:
@@ -37,7 +34,7 @@ def make_connection():
 def sanitize_string(input_str: str | None) -> str | None:
     if input_str is None:
         return None
-    return html_escape(str(input_str).replace("\x00", ""))
+    return str(input_str).replace("\x00", "")
 
 
 def postgres_string_format(input_string: str | None, size: int) -> str | None:
