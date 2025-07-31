@@ -61,13 +61,15 @@ def postgres_string_format(input_string: str | None, size: int) -> str | None:
         )
         if len(string_to_validate) < size:
             while (
-                len(" ".join(words[: words_copy + 1]) + "…") < size
+                len(string_to_validate) < size
                 and words_copy < words_count
             ):
                 words_copy += 1
                 string_to_validate = sanitize_string(
                     " ".join(words[: words_copy + 1]) + "…"
                 )
+            if len(string_to_validate) > size:
+                words_copy -= 1
             formatted_string = sanitize_string(
                 " ".join(words[: words_copy + 1]) + "…"
             )
